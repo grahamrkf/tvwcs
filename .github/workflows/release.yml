@@ -1,6 +1,6 @@
 name: Release
 
-# Prerelease workflow: every push to `main` whose VERSION has no release yet builds TVWCS's .deb package (tvwcs),
+# Prerelease workflow: every push to `main` whose VERSION has no release yet builds TVWCS's .deb package (tvwcs), its Fedora .rpm, its Arch PKGBUILD,
 #   tvwcs.tar.gz and TVWCS-<version>.zip, and publishes them as the prerelease v<version>. Once it has been tested on a TV computer, the Promote workflow marks
 #   it as the latest release, which is what TVWCS's updater installs by default.
 # Beta workflow: every push to `beta` builds a prerelease you can download and test.
@@ -50,6 +50,10 @@ jobs:
           else
             ./scripts/make-release.sh
             ./scripts/build-arch.sh   # the Arch package's PKGBUILD, tvwcs.install and source tarball
+            # the Fedora package, built on Fedora
+            docker run --rm -v "$PWD:/src" -w /src fedora:latest sh -c \
+              'dnf -y -q install rpm-build python3 git-core && git config --global --add safe.directory /src && ./scripts/build-rpm.sh'
+            sudo chown -R "$(id -u):$(id -g)" resources
             echo "file=$(ls -t resources/TVWCS-*.zip | grep -v beta | head -1)" >> "$GITHUB_OUTPUT"
           fi
       - name: Upload artifact
@@ -75,3 +79,4 @@ jobs:
             resources/arch/PKGBUILD
             resources/arch/tvwcs.install
             resources/arch/tvwcs-*-src.tar.gz
+            resources/fedora/tvwcs-*.noarch.rpm

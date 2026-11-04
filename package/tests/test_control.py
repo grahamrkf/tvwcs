@@ -325,7 +325,8 @@ class UpdatesTests(unittest.TestCase):
     def test_detect_uses_the_first_manager_found(self):
         self.assertEqual(upd.detect(which=lambda c:"/usr/bin/"+c if c in ("apt-get","flatpak") else None).id,"apt")
         self.assertEqual(upd.detect(which=lambda c:"/usr/bin/"+c if c in ("pacman","checkupdates") else None).id,"pacman")
-        self.assertIsNone(upd.detect(which=lambda c:"/usr/bin/"+c if c in ("zypper","dnf","xbps-install","apk") else None))   # not supported
+        self.assertEqual(upd.detect(which=lambda c:"/usr/bin/"+c if c in ("dnf",) else None).id,"dnf")
+        self.assertIsNone(upd.detect(which=lambda c:"/usr/bin/"+c if c in ("zypper","xbps-install","apk") else None))   # not supported
         self.assertIsNone(upd.detect(which=lambda c:None))
     def test_age_and_reboot(self):
         self.assertEqual([upd.age_text(t,1000000) for t in (999990,1000000-300,1000000-7200,1000000-86400*3)],["just now","5 minutes ago","2 hours ago","3 days ago"])

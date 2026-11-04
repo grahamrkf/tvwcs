@@ -58,10 +58,10 @@ The apps in these demos are mockups (a window with a still picture), labelled MO
 
 ## What you need
 
-- **Debian, Ubuntu LTS (tested on 26.04), or another Debian-based system** (Linux Mint, Pop!_OS, Raspberry Pi OS), or **Arch Linux or a system built on it** (EndeavourOS, CachyOS, Manjaro). Other distributions are not supported.
-- **systemd** and **sway**. apt or pacman installs sway with TVWCS.
+- **Debian, Ubuntu LTS (tested on 26.04), or another Debian-based system** (Linux Mint, Pop!_OS, Raspberry Pi OS), **Arch Linux or a system built on it** (EndeavourOS, CachyOS, Manjaro), or **Fedora 42 or later** (Nobara and Ultramarine too; the Atomic editions with limits). Other distributions are not supported.
+- **systemd** and **sway**. apt, pacman or dnf installs sway with TVWCS.
 
-**New computer?** [Setting up a TV computer with Debian](docs/INSTALL-DEBIAN.md) goes from an empty computer to one that boots into TVWCS. On Arch, see [Installing TVWCS on Arch](docs/INSTALL-ARCH.md) for the steps by hand and what Arch does differently.
+**New computer?** [Setting up a TV computer with Debian](docs/INSTALL-DEBIAN.md) goes from an empty computer to one that boots into TVWCS. On Arch, see [Installing TVWCS on Arch](docs/INSTALL-ARCH.md), and on Fedora [Installing TVWCS on Fedora](docs/INSTALL-FEDORA.md), for the steps by hand and what each does differently.
 
 ## Install
 
@@ -78,13 +78,13 @@ wget -qO- https://github.com/grahamrkf/tvwcs/releases/latest/download/install.sh
 3. **Your usual sway session:** whether to add TVWCS to it too, in desktop mode (one `include /usr/share/tvwcs/tvwcs.conf` line in its config).
 4. **On Ubuntu:** whether to remove Snap, cloud-init and the Ubuntu Pro client.
 
-Then it downloads the release's package and installs it with apt, or on Arch builds it from the PKGBUILD with makepkg and installs it with pacman. Every file of yours it changes is backed up first as `<file>.tvwcs-backup`. Your own data (channels, favorites, settings, hotkeys) is kept in `~/.config/tvwcs/`.
+Then it downloads the release's package and installs it with apt (on Fedora, its .rpm with dnf), or on Arch builds it from the PKGBUILD with makepkg and installs it with pacman. Every file of yours it changes is backed up first as `<file>.tvwcs-backup`. Your own data (channels, favorites, settings, hotkeys) is kept in `~/.config/tvwcs/`.
 
-The package (a .deb, and a PKGBUILD for Arch) is also attached to each [release](https://github.com/grahamrkf/tvwcs/releases) if you'd rather install it yourself (`sudo apt install ./tvwcs_<version>_all.deb`). Installing it on its own only adds the **TVWCS** session to the login screen and changes no settings.
+The package (a .deb, an .rpm for Fedora, and a PKGBUILD for Arch) is also attached to each [release](https://github.com/grahamrkf/tvwcs/releases) if you'd rather install it yourself (`sudo apt install ./tvwcs_<version>_all.deb`). Installing it on its own only adds the **TVWCS** session to the login screen and changes no settings.
 
 **Update:** **Settings › Software updates › Check for TVWCS updates** (or run the installer again; on Arch, run the installer again). Your data is never changed.
 
-**Remove:** `install.sh --remove` (or `sudo apt purge tvwcs`, or `sudo pacman -R tvwcs`). It also takes TVWCS out of your usual sway config, ends its automatic login on the text console and in greetd, LightDM or SDDM, and leaves the rest of their settings alone.
+**Remove:** `install.sh --remove` (or `sudo apt purge tvwcs`, `sudo dnf remove tvwcs`, or `sudo pacman -R tvwcs`). It also takes TVWCS out of your usual sway config, ends its automatic login on the text console and in greetd, LightDM or SDDM, and leaves the rest of their settings alone.
 
 ### The `tvwcs` command
 
@@ -143,7 +143,7 @@ Open **TVWCS Settings** with channel 00, from a status panel's settings button, 
 | **Power and sleep** (`power`) | When the screen turns off, the computer locks and it sleeps (sway's swayidle times them; sound playing and apps that ask keep it awake). A laptop has these times twice, plugged in and on battery, and a choice of what to do when the battery is nearly empty. |
 | **Bluetooth** (`bluetooth`) | Pair, connect and forget devices. Shows battery levels. |
 | **Date and time** (`datetime`) | Time zone (one list), network time, 12- or 24-hour clock. |
-| **Software updates** (`updates`) | System updates (apt or pacman, with AUR helpers on Arch) and TVWCS's own updates, including prereleases and rolling back. |
+| **Software updates** (`updates`) | System updates (apt, dnf, or pacman with AUR helpers on Arch) and TVWCS's own updates, including prereleases and rolling back. |
 | **System information** (`system`) | Hardware and versions. Turns the SSH server on or off and shows how to connect. |
 | **Network** (`network`) | Ethernet and Wi-Fi, and fixed IP settings. Without NetworkManager, Wi-Fi through iwd can be joined and forgotten. A port the Debian installer set up, or Ubuntu Server's netplan, can be handed to NetworkManager, keeping the old setup as a backup. |
 | **Storage** (`storage`) | Drives and their partitions: mount, unmount and safely remove. |

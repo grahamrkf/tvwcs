@@ -437,7 +437,7 @@ class _SelfUpdate:
         self.section("TVWCS UPDATES")
         self.row("Check for TVWCS updates",self.update_text or f"Version {__version__}",None if self.updating else self.check_updates,ident="opt:update",
                  icon="view-refresh-symbolic",fallback="⟳")
-        if selfupdate.other_package():
+        if selfupdate.builds_itself():
             self.note(f"Looks for a newer release of TVWCS on GitHub ({selfupdate.GITHUB_REPO}). This copy was built from TVWCS's "
                       "Arch package: install a new release by running TVWCS's installer again in a terminal (or with makepkg -si, as in docs/INSTALL-ARCH.md).")
             return
@@ -453,7 +453,7 @@ class _SelfUpdate:
     def check_updates(self):
         self.updating=True; self.update_text="Checking…"; self.redraw()
         def failed(exc): self.updating=False; self.update_text="Check failed"; self.redraw(); self.win.notice("TVWCS updates",f"Could not check for updates: {exc}")
-        prereleases=bool(ConfigStore().settings["update_prereleases"]) and not selfupdate.other_package()
+        prereleases=bool(ConfigStore().settings["update_prereleases"]) and not selfupdate.builds_itself()
         in_background(lambda:selfupdate.latest_release(prereleases),self.checked,failed)
     def roll_back(self):
         self.updating=True; self.update_text="Checking…"; self.redraw()
@@ -471,7 +471,7 @@ class _SelfUpdate:
         self.updating=False
         if not selfupdate.is_newer(release.version,__version__): self.update_text=f"Up to date ({__version__})"; self.redraw(); return
         self.update_text=f"{release.version} available"; self.redraw()
-        if selfupdate.other_package():
+        if selfupdate.builds_itself():
             self.win.notice("TVWCS updates",f"TVWCS {release.version} is available (you have {__version__}). Install it by running TVWCS's "
                             "installer again in a terminal:\n\ncurl -fsSL https://github.com/grahamrkf/tvwcs/releases/latest/download/install.sh | bash"); return
         if not selfupdate.packaged():
@@ -481,7 +481,7 @@ class _SelfUpdate:
                          "It asks for your password. TVWCS restarts afterwards; your channels, favorites, options and hotkeys are kept.","Install update",
                          lambda:self.install(release),danger=False)
     def install(self, release):
-        """Download the release's packages (those installed here), then install them as root with apt."""
+        """Download the release's packages (those installed here), then install them as root with apt (or dnf)."""
         self.updating=True; self.update_text="Downloading…"; self.redraw()
         def failed(exc): self.updating=False; self.update_text="Update failed"; self.redraw(); self.win.notice("TVWCS updates",f"The update failed: {exc}")
         def downloaded(result):
@@ -491,12 +491,12 @@ class _SelfUpdate:
                 selfupdate.discard(folder); self.updating=False
                 if code:
                     self.update_text="Update failed"; self.redraw()
-                    self.win.notice("TVWCS updates","The update failed:\n"+("\n".join(lines[-4:]) or tail or "apt-get did not finish.").strip()); return
+                    self.win.notice("TVWCS updates","The update failed:\n"+("\n".join(lines[-4:]) or tail or "The package manager did not finish.").strip()); return
                 self.update_text=f"Installed {release.version}"; self.redraw()
                 restarted=tell_tvwcs("restart /usr/bin/tvwcs")
                 self.win.notice("TVWCS updated",f"TVWCS {release.version} is installed"+(" and has restarted." if restarted else ".")+
                                 " Close Settings and open it again to use the new version.")
-            self.win.run_as_root(selfupdate.install_argv(files),"Installing TVWCS "+release.version,lines.append,done)
+            self.win.run_as_root(selfupdate.install_argv(files,current=__version__,version=release.version),"Installing TVWCS "+release.version,lines.append,done)
         in_background(lambda:selfupdate.download(release,selfupdate.installed_packages()),downloaded,failed)
 
 # ====================================================================== Power and sleep
@@ -634,6 +634,9 @@ class SoundPage(Page):
             if distro.is_arch():
                 return ("The computer has no sound card the system can use: its driver, or the firmware it needs, is missing. "
                         "Install sof-firmware (Intel laptops and mini PCs) and linux-firmware, then restart.")
+            if distro.is_fedora():
+                return ("The computer has no sound card the system can use: its driver, or the firmware it needs, is missing. "
+                        "Install alsa-sof-firmware (Intel laptops and mini PCs) and linux-firmware, then restart.")
             return ("The computer has no sound card the system can use: its driver, or the firmware it needs, is missing. On Debian, "
                     "install firmware-sof-signed (Intel laptops and mini PCs) or firmware-misc-nonfree (from non-free-firmware), then restart.")
         return "No sound output was found."

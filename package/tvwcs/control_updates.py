@@ -1,4 +1,5 @@
-"""Software updates for Settings: the distribution's package manager (apt, or pacman on Arch). No GTK dependency.
+"""Software updates for Settings: the distribution's package manager (apt, pacman on Arch, dnf on Fedora). No GTK
+dependency. Fedora's Atomic editions update through rpm-ostree, which this does not drive: read_state says so.
 
 Listing the waiting updates never needs root. Installing them does: the panel runs the `install` command through
 sudo or doas (see privilege.py and ui_control.py).
@@ -69,6 +70,20 @@ def parse_pacman(text):
         if m and "[ignored]" not in line: found.append(Update(m.group(1),m.group(3),m.group(2)))
     return found
 
+_ARCHES={"x86_64","noarch","aarch64","i686","i386","ppc64le","s390x","armv7hl","riscv64"}
+def parse_dnf(text):
+    """`dnf check-update`: 'bash.x86_64   5.2.32-1.fc41   updates' (dnf 4 and 5). Its list of packages that replace
+    others ("Obsoleting packages") comes after, and is left out, as are its notes about the metadata."""
+    found=[]
+    for line in text.splitlines():
+        if line.lower().startswith(("obsoleting","security:")): break
+        parts=line.split()
+        if len(parts)!=3 or line[:1].isspace(): continue
+        name,dot,arch=parts[0].rpartition(".")
+        if dot and arch in _ARCHES and (parts[1][:1].isdigit() or ":" in parts[1]):
+            found.append(Update(name,parts[1],"",parts[2]))
+    return found
+
 _APT_INSTALL=("env","DEBIAN_FRONTEND=noninteractive","sh","-c",
               "apt-get update && apt-get -y -o Dpkg::Options::=--force-confdef -o Dpkg::Options::=--force-confold upgrade --with-new-pkgs")
 MANAGERS=(
@@ -77,13 +92,21 @@ MANAGERS=(
     # real one half updated; it exits 2 when nothing waits. Installing is always a full upgrade: Arch has no other kind.
     Manager("pacman","pacman",("checkupdates",),parse_pacman,("pacman","-Syu","--noconfirm"),ok_codes=(0,2),fresh_lists=True,
             step_argv=("pacman","-Syu")),
+    # dnf check-update exits 100 when updates wait. As a normal user it reads the package lists root downloaded (or
+    # downloads its own copy when those are old); installing downloads fresh ones first.
+    Manager("dnf","DNF",("dnf","check-update","-q"),parse_dnf,("dnf","upgrade","-y","--refresh"),ok_codes=(0,100),
+            refresh_argv=("dnf","makecache","--refresh")),
 )
-_TOOL={"apt":"apt-get","pacman":"pacman"}
+_TOOL={"apt":"apt-get","pacman":"pacman","dnf":"dnf"}
+_FAMILY_MANAGER={"debian":"apt","arch":"pacman","fedora":"dnf"}
 
 def detect(which=None):
-    """The system's package manager (the first found), or None."""
+    """The system's package manager: its family's (distro.py) when that is installed, else the first found, or None."""
+    from tvwcs import distro
     kwargs={} if which is None else {"which":which}
-    return next((m for m in MANAGERS if have(_TOOL[m.id],**kwargs)),None)
+    found=[m for m in MANAGERS if have(_TOOL[m.id],**kwargs)]
+    own=_FAMILY_MANAGER.get(distro.family(**kwargs))
+    return next((m for m in found if m.id==own),found[0] if found else None)
 
 def age_text(checked, now=None):
     """Seconds since the lists were downloaded -> 'just now' / '5 minutes ago' / '3 hours ago' / '2 days ago'."""
@@ -94,7 +117,8 @@ def age_text(checked, now=None):
             n=int(seconds//size); return f"{n} {unit}{'s' if n!=1 else ''} ago"
     return "just now"
 
-_LISTS={"apt":("/var/lib/apt/lists","/var/cache/apt/pkgcache.bin"),"pacman":("/var/lib/pacman/sync",)}
+_LISTS={"apt":("/var/lib/apt/lists","/var/cache/apt/pkgcache.bin"),"pacman":("/var/lib/pacman/sync",),
+        "dnf":("/var/cache/libdnf5","/var/cache/dnf")}
 def lists_checked(manager):
     times=[]
     for path in _LISTS.get(manager.id,()):
@@ -102,10 +126,17 @@ def lists_checked(manager):
         except OSError: pass
     return max(times) if times else None
 
-def reboot_needed(release=None, exists=os.path.exists):
-    """Debian and Ubuntu leave a marker; elsewhere, an updated kernel removes the running one's modules folder."""
+def reboot_needed(release=None, exists=os.path.exists, dnf=None):
+    """Debian and Ubuntu leave a marker; Fedora keeps the older kernels, so there dnf needs-restarting -r answers (exit 1:
+    restart); elsewhere, an updated kernel removes the running one's modules folder."""
     release=release or platform.release()
     if exists("/run/reboot-required") or exists("/var/run/reboot-required"): return True
+    if dnf is None:
+        from tvwcs import distro
+        dnf=distro.is_fedora() and have("dnf")
+    if dnf:
+        r=run(["dnf","needs-restarting","-r"],timeout=60)
+        if r.code in (0,1): return r.code==1   # anything else: the plugin is missing (dnf5-plugins / dnf-plugins-core)
     return not any(exists(f"{d}/{release}") for d in ("/usr/lib/modules","/lib/modules")) and exists("/usr/lib/modules")
 
 def _list(manager):
@@ -116,7 +147,11 @@ def _list(manager):
 
 def read_state():
     manager=detect()
-    if manager is None: return UpdatesState(False,"No supported package manager was found (apt on Debian and its family, pacman on Arch).")
+    if manager is None: return UpdatesState(False,"No supported package manager was found (apt on Debian and its family, pacman on Arch, dnf on Fedora).")
+    from tvwcs import distro
+    if manager.id=="dnf" and distro.atomic():
+        return UpdatesState(False,"This is one of Fedora's Atomic editions: its system updates through rpm-ostree, not dnf. Update it with "
+                                  "sudo rpm-ostree upgrade in a terminal (it takes effect at the next start-up), or let it update by itself.")
     state=UpdatesState(True,"",manager)
     state.updates,problem=_list(manager)
     state.checked=time.time() if manager.fresh_lists and not problem else lists_checked(manager)

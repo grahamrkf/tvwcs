@@ -41,16 +41,17 @@ The look follows Metro (Modern UI): flat and typographic. The Retro theme swaps 
 
 ## Supported systems
 
-Debian and its family (Ubuntu LTS, Mint, Pop!_OS, Raspberry Pi OS) with apt, and Arch and its family with pacman, all with systemd and sway. `distro.py` holds each family's package names, install commands and greetd details. Other distributions, non-systemd init systems, i3/X11 and Flatpak were removed along the way; the CHANGELOG says when, and git history has the code.
+Debian and its family (Ubuntu LTS, Mint, Pop!_OS, Raspberry Pi OS) with apt, Arch and its family with pacman, and Fedora with dnf (5.15.0; Atomic editions only by layering the .rpm), all with systemd and sway. `distro.py` holds each family's package names, install commands and greetd details. Other distributions, non-systemd init systems, i3/X11 and Flatpak were removed along the way; the CHANGELOG says when, and git history has the code.
 
 ## Packages and installer
 
 - **Debian:** one package, `tvwcs_<version>_all.deb`, built by `scripts/build-debs.sh` with plain `dpkg-deb` (nothing is compiled) from `packaging/tvwcs/`. It conflicts with 5.0.x's `tvwcs-boot-logo`, so apt removes that.
+- **Fedora:** `scripts/build-rpm.sh` fills in `packaging/fedora/tvwcs.spec.in` and builds `tvwcs-<version>-1.noarch.rpm` with rpmbuild (on Fedora; the release workflow runs it in a Fedora container). Its `%preun` undoes TVWCS's setup like the .deb's prerm, only on removal.
 - **Arch:** `scripts/build-arch.sh` fills in `packaging/arch/PKGBUILD.in` and `tvwcs.install` with the version and the source tarball's checksum. `--package` also runs makepkg.
 - **What's installed:** the Python package in `/usr/lib/tvwcs`, `/usr/bin/tvwcs`, `/usr/bin/tvwcs-session` (it makes `~/.config/tvwcs/sway-session.conf` from `/etc/sway/config` the first time, writes default hotkeys and runs sway), the session entry `tvwcs-sway.desktop`, `/usr/share/tvwcs/tvwcs.conf` and the Settings launcher. Installing changes no settings.
 - **Login:** TVWCS has no login screen of its own and never installs one. `loginscreen.py` sets the automatic login where the login screen in use keeps it (greetd's initial session, LightDM's or SDDM's settings), or without one a console autologin (`getty@tty1` drop-in plus a `~/.profile` block).
-- **`install.sh`** (POSIX sh, at the repository root) runs in a terminal, on its own (`wget -qO- …/releases/latest/download/install.sh | bash`, then it downloads the chosen release; each release has its own copy attached, so an installer change reaches new installs only once its release is promoted) or from an unpacked `tvwcs.tar.gz`. It asks everything first, then installs with apt, or on Arch builds the PKGBUILD with makepkg and installs it with pacman. `--remove` removes the package and TVWCS's changes to sway, greetd and the console login.
-- **Self-update** (`selfupdate.py`, Debian only) downloads a release's .deb and installs it with `apt-get install` as root. On Arch it only says a release is out.
+- **`install.sh`** (POSIX sh, at the repository root) runs in a terminal, on its own (`wget -qO- …/releases/latest/download/install.sh | bash`, then it downloads the chosen release; each release has its own copy attached, so an installer change reaches new installs only once its release is promoted) or from an unpacked `tvwcs.tar.gz`. It asks everything first, then installs with apt (dnf on Fedora, with `dnf downgrade` for an older version; it stops on Fedora Atomic), or on Arch builds the PKGBUILD with makepkg and installs it with pacman. `--remove` removes the package and TVWCS's changes to sway, greetd and the console login.
+- **Self-update** (`selfupdate.py`) downloads a release's .deb and installs it with `apt-get install` as root, or on Fedora its .rpm with `dnf install` / `downgrade` / `reinstall` (the package's `/usr/lib/tvwcs/PACKAGE` says `fedora`). On Arch it only says a release is out.
 
 ## Where things live
 
@@ -81,18 +82,19 @@ Logic modules have no GTK dependency and are tested without a display.
 ```
 package/tvwcs/   modules                  package/tests/  unit tests
 package/bin/     the tvwcs launcher       data/           tvwcs.conf, the session, .desktop files, icons
-scripts/         tests, packages, release packaging/      the Debian control files and the Arch PKGBUILD
-docs/            install guides for Debian and Arch
+scripts/         tests, packages, release packaging/      the Debian control files, the Fedora spec and the Arch PKGBUILD
+docs/            install guides for Debian, Arch and Fedora
 ```
 
 ```sh
 ./scripts/run-tests.sh            # unit tests (no display needed)
 ./scripts/build-debs.sh           # resources/tvwcs_<version>_all.deb
+./scripts/build-rpm.sh            # resources/fedora/: tvwcs.spec, the source tarball and (on Fedora) the .rpm
 ./scripts/build-arch.sh           # resources/arch/: PKGBUILD, tvwcs.install, the source tarball (--package on Arch builds it)
 ./scripts/make-release.sh         # all of that, plus resources/tvwcs.tar.gz and resources/TVWCS-<version>.zip
 ```
 
-CI (`.github/workflows/ci.yml`) runs the unit tests on Ubuntu, and on Arch also builds the package, installs it with pacman, runs namcap and removes it.
+CI (`.github/workflows/ci.yml`) runs the unit tests on Ubuntu, and on Arch also builds the package, installs it with pacman, runs namcap and removes it; in a Fedora container it builds the .rpm, installs it with dnf, lists updates as a normal user, installs a newer .rpm and rolls back, checks greetd's Fedora details and removes it.
 
 ## Releases
 
