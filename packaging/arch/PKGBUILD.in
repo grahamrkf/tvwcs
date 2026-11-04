@@ -1,4 +1,4 @@
-# Maintainer: TVWCS <https://github.com/one-moment-please/tvwcs>
+# Maintainer: TVWCS <https://github.com/grahamrkf/tvwcs>
 # Made by scripts/build-arch.sh from packaging/arch/PKGBUILD.in, which fills in the version and checksum. Each release
 # on GitHub has this PKGBUILD, tvwcs.install and the source tarball attached; it is also what goes to the AUR.
 pkgname=tvwcs
@@ -6,7 +6,7 @@ pkgver=@VERSION@
 pkgrel=1
 pkgdesc="TV launcher, workspace switcher and settings for sway, made for a remote"
 arch=('any')
-url="https://github.com/one-moment-please/tvwcs"
+url="https://github.com/grahamrkf/tvwcs"
 license=('MIT' 'BSD-2-Clause' 'OFL-1.1' 'LicenseRef-font8x8')
 depends=('python' 'python-gobject' 'gtk4' 'pango' 'graphene' 'hicolor-icon-theme' 'sway' 'swayidle' 'swaylock' 'libpulse' 'udisks2' 'glib2'
          'xdg-desktop-portal' 'xdg-desktop-portal-gtk' 'adwaita-icon-theme' 'ttf-opensans' 'librsvg'

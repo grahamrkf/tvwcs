@@ -2,7 +2,7 @@
 # TVWCS's installer. It installs, upgrades or removes TVWCS: its Debian package, or on Arch the package it builds from
 # the release's PKGBUILD. Run it in a terminal:
 #
-#     wget -qO- https://github.com/one-moment-please/tvwcs/releases/latest/download/install.sh | bash
+#     wget -qO- https://github.com/grahamrkf/tvwcs/releases/latest/download/install.sh | bash
 #
 # (it then downloads the release you choose), or from an unpacked release (./install.sh; it then offers to install the
 # .deb next to it, or to download another release). It asks every question first and changes nothing (downloads
@@ -23,7 +23,7 @@
 # to treat as installed) to stand in for the system.
 set -eu
 
-REPO=one-moment-please/tvwcs
+REPO=grahamrkf/tvwcs
 GITHUB=${TVWCS_GITHUB:-https://github.com}
 API=${TVWCS_API:-https://api.github.com}
 CONFIG_HOME=${XDG_CONFIG_HOME:-$HOME/.config}

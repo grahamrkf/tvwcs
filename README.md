@@ -68,10 +68,10 @@ The apps in these demos are mockups (a window with a still picture), labelled MO
 Run the installer in a terminal, as your own user (not root):
 
 ```bash
-wget -qO- https://github.com/one-moment-please/tvwcs/releases/latest/download/install.sh | bash
+wget -qO- https://github.com/grahamrkf/tvwcs/releases/latest/download/install.sh | bash
 ```
 
-(or `curl -fsSL https://github.com/one-moment-please/tvwcs/releases/latest/download/install.sh | bash`). Over SSH, sign in with `ssh -t` so it can ask its questions. It asks everything first and changes nothing until you agree to its list of what it will do:
+(or `curl -fsSL https://github.com/grahamrkf/tvwcs/releases/latest/download/install.sh | bash`). Over SSH, sign in with `ssh -t` so it can ask its questions. It asks everything first and changes nothing until you agree to its list of what it will do:
 
 1. **Which version:** the latest release, the prerelease when there is one, or one of the two releases before the latest. (`TVWCS_VERSION=latest`, `package` or a version such as `5.13.0` answers this for scripted installs.)
 2. **Logging in automatically into TVWCS.** With no login screen, it offers to log you in on the first text console at startup, straight into TVWCS. With greetd, LightDM or SDDM, it offers their automatic login. With another login screen, choose **TVWCS** there.
@@ -80,7 +80,7 @@ wget -qO- https://github.com/one-moment-please/tvwcs/releases/latest/download/in
 
 Then it downloads the release's package and installs it with apt, or on Arch builds it from the PKGBUILD with makepkg and installs it with pacman. Every file of yours it changes is backed up first as `<file>.tvwcs-backup`. Your own data (channels, favorites, settings, hotkeys) is kept in `~/.config/tvwcs/`.
 
-The package (a .deb, and a PKGBUILD for Arch) is also attached to each [release](https://github.com/one-moment-please/tvwcs/releases) if you'd rather install it yourself (`sudo apt install ./tvwcs_<version>_all.deb`). Installing it on its own only adds the **TVWCS** session to the login screen and changes no settings.
+The package (a .deb, and a PKGBUILD for Arch) is also attached to each [release](https://github.com/grahamrkf/tvwcs/releases) if you'd rather install it yourself (`sudo apt install ./tvwcs_<version>_all.deb`). Installing it on its own only adds the **TVWCS** session to the login screen and changes no settings.
 
 **Update:** **Settings › Software updates › Check for TVWCS updates** (or run the installer again; on Arch, run the installer again). Your data is never changed.
 

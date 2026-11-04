@@ -473,7 +473,7 @@ class _SelfUpdate:
         self.update_text=f"{release.version} available"; self.redraw()
         if selfupdate.other_package():
             self.win.notice("TVWCS updates",f"TVWCS {release.version} is available (you have {__version__}). Install it by running TVWCS's "
-                            "installer again in a terminal:\n\ncurl -fsSL https://github.com/one-moment-please/tvwcs/releases/latest/download/install.sh | bash"); return
+                            "installer again in a terminal:\n\ncurl -fsSL https://github.com/grahamrkf/tvwcs/releases/latest/download/install.sh | bash"); return
         if not selfupdate.packaged():
             self.win.notice("TVWCS updates",f"TVWCS {release.version} is available. This copy runs from a source checkout: update it with git pull."); return
         kind=" prerelease" if release.prerelease else ""
