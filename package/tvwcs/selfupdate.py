@@ -11,7 +11,7 @@ import json, os, re, shutil, subprocess, tempfile, urllib.error, urllib.request
 from dataclasses import dataclass
 from pathlib import Path
 
-GITHUB_REPO="one-moment-please/tvwcs"
+GITHUB_REPO="grahamrkf/tvwcs"
 LATEST_URL=f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest"
 RELEASES_URL=f"https://api.github.com/repos/{GITHUB_REPO}/releases?per_page=30"
 PACKAGES=("tvwcs",)

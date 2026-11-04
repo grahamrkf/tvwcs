@@ -65,7 +65,7 @@ The rest is done from the other computer.
 3. Run the installer:
 
    ```bash
-   wget -qO- https://github.com/one-moment-please/tvwcs/releases/latest/download/install.sh | bash
+   wget -qO- https://github.com/grahamrkf/tvwcs/releases/latest/download/install.sh | bash
    ```
 
 4. Answer its questions. It asks everything first, then shows what it will do and changes nothing until you say yes. For a TV computer:

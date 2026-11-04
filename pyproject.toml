@@ -27,7 +27,7 @@ classifiers = [
 tvwcs = "tvwcs.main:main"
 
 [project.urls]
-Homepage = "https://github.com/one-moment-please/tvwcs"
+Homepage = "https://github.com/grahamrkf/tvwcs"
 Changelog = "CHANGELOG.md"
 
 [tool.setuptools]

@@ -71,10 +71,10 @@ class InstallTests(unittest.TestCase):
     def releases(self, latest, rows):
         """GitHub's release list: rows of (version, prerelease), each with its packages to download."""
         items=[{"url":"x","tag_name":f"v{v}","name":f"TVWCS {v}","draft":False,"prerelease":pre,"body":'not a "tag_name": "v9.9.9"'} for v,pre in rows]
-        (self.downloads/"repos_one-moment-please_tvwcs_releases_per_page_30").write_text(json.dumps(items,indent=2))
-        (self.downloads/"repos_one-moment-please_tvwcs_releases_latest").write_text(json.dumps({"tag_name":f"v{latest}","prerelease":False}))
+        (self.downloads/"repos_grahamrkf_tvwcs_releases_per_page_30").write_text(json.dumps(items,indent=2))
+        (self.downloads/"repos_grahamrkf_tvwcs_releases_latest").write_text(json.dumps({"tag_name":f"v{latest}","prerelease":False}))
         for v,_pre in rows:
-            (self.downloads/f"one-moment-please_tvwcs_releases_download_v{v}_tvwcs_{v}_all.deb").write_bytes(b"!<arch>\n")
+            (self.downloads/f"grahamrkf_tvwcs_releases_download_v{v}_tvwcs_{v}_all.deb").write_bytes(b"!<arch>\n")
 
     def test_help_and_options(self):
         p=self.run_install("--help"); self.assertEqual(p.returncode,0); self.assertIn("--remove",p.stdout); self.assertNotIn("set -eu",p.stdout)
@@ -171,8 +171,8 @@ class InstallTests(unittest.TestCase):
                                 f'v=$(sed -n "s/^pkgver=//p" PKGBUILD); : > "tvwcs-$v-1-any.pkg.tar.zst"')
         self.releases("5.11.0",[("5.12.0",True),("5.11.0",False),("5.10.2",False)])
         for v in ("5.12.0","5.11.0"):
-            (self.downloads/f"one-moment-please_tvwcs_releases_download_v{v}_PKGBUILD").write_text(f"pkgname=tvwcs\npkgver={v}\n")
-            (self.downloads/f"one-moment-please_tvwcs_releases_download_v{v}_tvwcs.install").write_text("post_install() { :; }\n")
+            (self.downloads/f"grahamrkf_tvwcs_releases_download_v{v}_PKGBUILD").write_text(f"pkgname=tvwcs\npkgver={v}\n")
+            (self.downloads/f"grahamrkf_tvwcs_releases_download_v{v}_tvwcs.install").write_text("post_install() { :; }\n")
     def test_on_arch_it_builds_the_pkgbuild_after_every_question(self):
         self.arch()
         out=self.converse([],{"Choose":"","automatically":"y","Go ahead":"y"})

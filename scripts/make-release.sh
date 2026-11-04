@@ -3,7 +3,7 @@
 #   tvwcs_<version>_all.deb   (scripts/build-debs.sh)
 #   tvwcs.tar.gz and TVWCS-<version>.zip: install.sh with the package, to install from without downloading them.
 # tvwcs.tar.gz's name never changes, so it can be downloaded from
-# https://github.com/one-moment-please/tvwcs/releases/latest/download/tvwcs.tar.gz. The zip is what TVWCS 4.x's
+# https://github.com/grahamrkf/tvwcs/releases/latest/download/tvwcs.tar.gz. The zip is what TVWCS 4.x's
 # updater looks for: its install.sh tells it that TVWCS 5 is installed from a terminal. (The zip also holds the Python
 # package, which 4.x's updater checks for.)
 #   scripts/make-release.sh --beta   names the zip TVWCS-<version>-beta.<n>.zip

@@ -1,5 +1,9 @@
 # Changelog
 
+## 5.14.1 — 2026-11-04
+
+- **New GitHub address.** The project moved from github.com/one-moment-please/tvwcs to github.com/grahamrkf/tvwcs. The updater in Settings, the installer, the package metadata (Debian control, PKGBUILD, pyproject.toml) and the docs now use the new address. Older copies keep working while GitHub redirects the old address.
+
 ## 5.14.0 — 2026-10-31
 
 - **The installer comes from the latest release.** Each release now has `install.sh` attached, and the README, the install guides, Settings and the installer's own hints download it from `releases/latest/download/install.sh` instead of the `main` branch. A change to the installer now reaches new installs only once its release is marked latest, like the package it installs.

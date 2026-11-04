@@ -1,13 +1,13 @@
 # Installing TVWCS on Arch
 
-TVWCS runs on Arch Linux and on systems built on it (EndeavourOS, CachyOS, Manjaro). It isn't in the AUR yet, so its package is built from the PKGBUILD attached to each [release](https://github.com/one-moment-please/tvwcs/releases). That takes a few seconds, since there is nothing to compile. pacman installs what TVWCS needs with it (sway, swayidle, swaylock, GTK 4 for Python and so on).
+TVWCS runs on Arch Linux and on systems built on it (EndeavourOS, CachyOS, Manjaro). It isn't in the AUR yet, so its package is built from the PKGBUILD attached to each [release](https://github.com/grahamrkf/tvwcs/releases). That takes a few seconds, since there is nothing to compile. pacman installs what TVWCS needs with it (sway, swayidle, swaylock, GTK 4 for Python and so on).
 
 ## Install
 
 The installer does it all, asking its questions first (which version, logging in automatically, adding TVWCS to your usual sway session). Once you agree, it downloads the release's PKGBUILD, builds the package with `makepkg` as you, and installs it with pacman (installing `fakeroot` first if it's missing). Run it in a terminal, as your own user (not root), who can use `sudo`:
 
 ```sh
-curl -fsSL https://github.com/one-moment-please/tvwcs/releases/latest/download/install.sh | bash
+curl -fsSL https://github.com/grahamrkf/tvwcs/releases/latest/download/install.sh | bash
 ```
 
 If pacman says it can't find a package TVWCS needs, update the system first (`sudo pacman -Syu`) and run it again.
@@ -19,8 +19,8 @@ You need `base-devel` (for `makepkg`) and a user who can use `sudo`:
 ```sh
 sudo pacman -S --needed base-devel
 mkdir -p ~/tvwcs-pkg && cd ~/tvwcs-pkg
-curl -LO https://github.com/one-moment-please/tvwcs/releases/latest/download/PKGBUILD
-curl -LO https://github.com/one-moment-please/tvwcs/releases/latest/download/tvwcs.install
+curl -LO https://github.com/grahamrkf/tvwcs/releases/latest/download/PKGBUILD
+curl -LO https://github.com/grahamrkf/tvwcs/releases/latest/download/tvwcs.install
 makepkg -si
 ```
 
