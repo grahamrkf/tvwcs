@@ -16,6 +16,81 @@ jobs:
       - name: Run unit tests
         run: ./scripts/run-tests.sh
 
+  fedora:
+    name: Fedora package (tests, build, install, dnf updates, upgrade/downgrade, remove)
+    runs-on: ubuntu-latest
+    container: fedora:latest
+    steps:
+      - name: Install the build tools
+        run: dnf -y install rpm-build python3 python3-gobject gtk4 git-core findutils
+      - uses: actions/checkout@v4
+      - name: Run unit tests with Fedora's Python
+        run: ./scripts/run-tests.sh
+      - name: Build the package
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          ./scripts/build-rpm.sh
+          rpm -qpil resources/fedora/tvwcs-*.noarch.rpm
+          rpm -qpR resources/fedora/tvwcs-*.noarch.rpm
+          cp resources/fedora/tvwcs-*.noarch.rpm /tmp/
+      - name: Install it with dnf (pulls every dependency by name)
+        run: dnf -y install resources/fedora/tvwcs-*.noarch.rpm
+      - name: Smoke test the installed package
+        run: |
+          tvwcs help
+          test "$(cat /usr/lib/tvwcs/PACKAGE)" = fedora
+          ls /usr/lib/tvwcs/tvwcs/__pycache__ | head -3
+          PYTHONPATH=/usr/lib/tvwcs python3 -c 'from tvwcs import distro, control_updates as u, features as f, selfupdate as s; assert distro.family()=="fedora"; assert u.detect().id=="dnf"; assert s.other_package()=="fedora" and not s.builds_itself(); assert s.installed_packages()==["tvwcs"], s.installed_packages(); print(f.packages_for(f.BY_KEY["bluetooth"]), distro.package_states(["bluez","tvwcs"]))'
+          PYTHONPATH=/usr/lib/tvwcs python3 -c 'import gi; gi.require_version("Gtk","4.0"); from tvwcs import ui_control_pages'
+          PYTHONPATH=/usr/lib/tvwcs python3 -m tvwcs.loginscreen status
+      - name: Software updates lists with dnf as a normal user, and after root refreshes the lists
+        run: |
+          useradd -m tester
+          dnf -y install dnf5-plugins || true
+          dnf makecache --refresh
+          su tester -c "PYTHONPATH=/usr/lib/tvwcs python3 -c 'from tvwcs import control_updates as u; s=u.read_state(); print(s.manager.id, s.total, s.problems, s.checked, u.reboot_needed()); assert not s.problems, s.problems; print(s.updates[:5])'"
+          dnf check-update -q | head -20 || true
+          PYTHONPATH=/usr/lib/tvwcs python3 -c 'import subprocess; from tvwcs import control_updates as u; out=subprocess.run(["dnf","check-update","-q"],capture_output=True,text=True).stdout; found=u.parse_dnf(out); lines=[l for l in out.splitlines() if l.strip() and not l[:1].isspace()]; print(len(found), "updates;", len(lines), "lines"); print(found[:3])'
+      - name: Settings installs Bluetooth with dnf (and starts it)
+        run: |
+          # bluez is a weak dependency, so dnf has already installed it: remove it first, so Settings has something to install
+          rpm -q bluez && dnf -y remove bluez
+          PYTHONPATH=/usr/lib/tvwcs python3 -c 'from tvwcs import features as f; import subprocess; miss=f.missing_packages(f.BY_KEY["bluetooth"]); assert miss==["bluez"], miss; argv=f.install_argv(miss,f.BY_KEY["bluetooth"]); print(argv); argv[2]=argv[2].split(" && systemctl")[0]; subprocess.run(argv,check=True); assert f.missing_packages(f.BY_KEY["bluetooth"])==[]'
+          command -v bluetoothctl
+      - name: greetd on Fedora (its user, text login and console)
+        run: |
+          dnf -y install greetd
+          cat /etc/greetd/config.toml
+          getent passwd greetd || getent passwd greeter || true
+          PYTHONPATH=/usr/lib/tvwcs python3 -c '
+          import os, pwd, tomllib
+          from tvwcs import distro
+          user, agreety, vt = distro.greetd()
+          cfg = tomllib.load(open("/etc/greetd/config.toml","rb"))
+          print(distro.greetd(), cfg)
+          assert os.path.exists(agreety), agreety
+          pwd.getpwnam(user)
+          assert cfg.get("default_session",{}).get("user", user) == user, cfg
+          assert int(cfg.get("terminal",{}).get("vt", vt)) == vt, cfg'
+      - name: TVWCS's own update installs a newer .rpm, then rolls back
+        run: |
+          echo 99.0.0 > VERSION && ./scripts/build-rpm.sh && git checkout VERSION
+          new=resources/fedora/tvwcs-99.0.0-1.noarch.rpm
+          old=$(ls /tmp/tvwcs-*.noarch.rpm); v=$(cat VERSION)
+          PYTHONPATH=/usr/lib/tvwcs python3 -c "import subprocess,sys; from tvwcs import selfupdate as s; a=s.install_argv(['$new'],current='$v',version='99.0.0'); print(a); subprocess.run(a,check=True)"
+          test "$(cat /usr/lib/tvwcs/VERSION)" = 99.0.0
+          PYTHONPATH=/usr/lib/tvwcs python3 -c "import subprocess,sys; from tvwcs import selfupdate as s; a=s.install_argv(['$old'],current='99.0.0',version='$v'); print(a); subprocess.run(a,check=True)"
+          test "$(cat /usr/lib/tvwcs/VERSION)" = "$v"
+          PYTHONPATH=/usr/lib/tvwcs python3 -c "import subprocess,sys; from tvwcs import selfupdate as s; a=s.install_argv(['$old'],current='$v',version='$v'); print(a); subprocess.run(a,check=True)"
+      - name: Remove it again (runs the .rpm's %preun)
+        run: |
+          printf '%s\n' '[terminal]' 'vt = 2' '' '[default_session]' 'command = "tuigreet --cmd sway"' 'user = "greetd"' '' '[initial_session]' 'command = "/usr/bin/tvwcs-session"' 'user = "tester"' > /etc/greetd/config.toml
+          dnf -y remove tvwcs
+          cat /etc/greetd/config.toml
+          grep -q 'command = "tuigreet --cmd sway"' /etc/greetd/config.toml && grep -q 'vt = 2' /etc/greetd/config.toml
+          if grep -q 'tvwcs-session\|initial_session' /etc/greetd/config.toml; then exit 1; fi
+          test ! -e /usr/lib/tvwcs
+
   arch:
     name: Arch package (tests, build, install, namcap, remove)
     runs-on: ubuntu-latest

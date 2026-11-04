@@ -30,7 +30,7 @@ class InstallTests(unittest.TestCase):
         self.downloads=t/"downloads"; self.downloads.mkdir()
         # wget: the file named after the URL's last parts in downloads/ (a/b/c -> a_b_c), else fail
         tool(self.bin,"wget",f'out=$2; url=$3; f=$(echo "$url" | sed "s#^[a-z]*://[^/]*/##; s#[/?=&]#_#g"); [ -f "{self.downloads}/$f" ] || exit 8; cp "{self.downloads}/$f" "$out"')
-        self.sys=t/"sysbin"; self.sys.mkdir(); hidden={"sway","gdm3","gdm","sddm","lightdm","greetd","wget","curl","sudo","doas","apt-get","pacman","makepkg","fakeroot"}
+        self.sys=t/"sysbin"; self.sys.mkdir(); hidden={"sway","gdm3","gdm","sddm","lightdm","greetd","wget","curl","sudo","doas","apt-get","pacman","makepkg","fakeroot","dnf","rpm"}
         for d in os.environ["PATH"].split(":"):
             if not os.path.isdir(d): continue
             for e in os.scandir(d):
@@ -210,5 +210,52 @@ class InstallTests(unittest.TestCase):
             out+=chunk
         os.waitpid(pid,0)
         self.assertIn("pacman -R --noconfirm tvwcs\n",self.apt(),out)
+
+    # ------------------------------------------------------------------ Fedora
+    def fedora(self, installed=""):
+        (self.etc/"os-release").write_text('NAME="Fedora Linux"\nID=fedora\nVERSION_ID=43\n')
+        tool(self.bin,"dnf",f'echo "dnf $*" >> "{self.log}"; exit 0')
+        self.releases("5.15.0",[("5.16.0",True),("5.15.0",False),("5.14.1",False)])
+        for v in ("5.16.0","5.15.0"):
+            (self.downloads/f"grahamrkf_tvwcs_releases_download_v{v}_tvwcs-{v}-1.noarch.rpm").write_bytes(b"\xed\xab\xee\xdb")
+        if installed:
+            (self.lib/"VERSION").write_text(installed+"\n"); self.env["TVWCS_PACKAGES"]="tvwcs"
+    def test_on_fedora_it_installs_the_rpm_with_dnf_after_every_question(self):
+        self.fedora()
+        out=self.converse([],{"Choose":"","automatically":"y","Go ahead":"y"})
+        self.assertEqual(self.status,0,out)
+        self.assertIn("TVWCS 5.16.0, a prerelease",out); self.assertNotIn("5.14.1",out)   # no .rpm before 5.15.0
+        self.assertIn("install the packages TVWCS needs with dnf",out)
+        self.assertLess(out.index("Go ahead?"),out.index("Downloading TVWCS 5.15.0"))
+        log=self.apt(); self.assertRegex(log,r"dnf install -y \S*/rpm/tvwcs-5\.15\.0-1\.noarch\.rpm"); self.assertNotIn("apt-get",log)
+        self.assertIn("--autologin ",(self.root/"etc"/"systemd"/"system"/"getty@tty1.service.d"/"tvwcs-autologin.conf").read_text())
+    def test_on_fedora_an_older_version_is_a_downgrade(self):
+        self.fedora(installed="5.16.0")
+        out=self.converse([],{"Choose":"1","automatically":"n","Go ahead":"y"})   # 1: the latest release, 5.15.0
+        self.assertEqual(self.status,0,out)
+        self.assertRegex(self.apt(),r"dnf downgrade -y \S*tvwcs-5\.15\.0-1\.noarch\.rpm")
+    def test_on_fedora_the_rpm_next_to_the_script(self):
+        self.fedora(); (self.pkg/"tvwcs_5.0.0_all.deb").unlink(); (self.pkg/"tvwcs-5.16.0-1.noarch.rpm").write_bytes(b"\xed\xab\xee\xdb")
+        out=self.converse([],{"Choose":"1","automatically":"n","Go ahead":"y"},script=self.pkg/"install.sh")
+        self.assertEqual(self.status,0,out)
+        self.assertIn("TVWCS 5.16.0 (the package next to this script)",out); self.assertRegex(self.apt(),r"dnf install -y \S*tvwcs-5\.16\.0-1\.noarch\.rpm")
+    def test_on_fedora_atomic_it_says_to_use_rpm_ostree(self):
+        self.fedora(); (Path(self.env["TVWCS_RUN"])/"ostree-booted").write_text("")
+        self.converse([],{}); self.assertNotEqual(self.status,0); self.assertIn("rpm-ostree install",self.out); self.assertEqual(self.apt(),"")
+    def test_rhel_is_not_fedora(self):
+        (self.etc/"os-release").write_text('ID="rocky"\nID_LIKE="rhel centos fedora"\n')
+        self.converse([],{}); self.assertNotEqual(self.status,0); self.assertIn("TVWCS supports Debian",self.out)
+    def test_on_fedora_remove_uses_dnf(self):
+        self.fedora()
+        pid,fd=pty.fork()
+        if pid==0: os.execvpe("sh",["sh",str(SCRIPT),"--remove"],self.env)
+        os.write(fd,b"y\nn\n"); out=b""
+        while True:
+            try: chunk=os.read(fd,4096)
+            except OSError: break
+            if not chunk: break
+            out+=chunk
+        os.waitpid(pid,0)
+        self.assertIn("dnf remove -y tvwcs\n",self.apt(),out)
 
 if __name__=="__main__": unittest.main()

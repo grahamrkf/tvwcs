@@ -304,6 +304,12 @@ def agreety_command() -> str:
     return f"{distro.greetd()[1]} --cmd {shlex.quote(shlex.join(session_command()))}"
 
 # ---------------------------------------------------------------------- changing the system (as root)
+def relabel(f):
+    """With SELinux (Fedora), give a file TVWCS wrote the label its place calls for: one made under another name and
+    renamed could otherwise keep the label of that name."""
+    if os.environ.get("TVWCS_ROOT") or not os.path.exists("/sys/fs/selinux/enforce"): return
+    tool=shutil.which("restorecon",path="/usr/sbin:/usr/bin:/sbin:/bin")
+    if tool: subprocess.run([tool,"-F",str(f)],check=False,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
 class Changer:
     """The system changes, done as root by `python3 -m tvwcs.loginscreen`. `run` runs systemctl (not run at all under
     TVWCS_ROOT, where it only records)."""
@@ -316,6 +322,7 @@ class Changer:
     def write(self, p, text, mode=0o644):
         f=path(p); f.parent.mkdir(parents=True,exist_ok=True)
         tmp=f.with_name(f.name+".tvwcs-new"); tmp.write_text(text,encoding="utf-8"); os.chmod(tmp,mode); os.replace(tmp,f)
+        relabel(f)
     def remove(self, p):
         try: path(p).unlink(); return True
         except FileNotFoundError: return False
@@ -334,7 +341,7 @@ class Changer:
             if link.is_symlink() or link.exists(): link.unlink()
             link.parent.mkdir(parents=True,exist_ok=True); link.symlink_to(target)
             self.systemctl("daemon-reload")
-        if distro.family()!=distro.ARCH:   # only Debian's family reads it
+        if distro.family() not in (distro.ARCH,distro.FEDORA):   # only Debian's family reads it
             exe=shutil.which(unit,path="/usr/sbin:/usr/bin:/sbin:/bin") or f"/usr/sbin/{unit}"
             self.write("/etc/X11/default-display-manager",exe+"\n")
         self.systemctl("set-default","graphical.target")   # greetd is only started by graphical.target

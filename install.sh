@@ -1,6 +1,6 @@
 #!/bin/sh
-# TVWCS's installer. It installs, upgrades or removes TVWCS: its Debian package, or on Arch the package it builds from
-# the release's PKGBUILD. Run it in a terminal:
+# TVWCS's installer. It installs, upgrades or removes TVWCS: its Debian package, on Fedora its .rpm, or on Arch the
+# package it builds from the release's PKGBUILD. Run it in a terminal:
 #
 #     wget -qO- https://github.com/grahamrkf/tvwcs/releases/latest/download/install.sh | bash
 #
@@ -13,9 +13,10 @@
 #     it (typing tvwcs there starts it too);
 #   - adding TVWCS to your usual sway session (one include line in its config), where it runs in desktop mode;
 #   - on Ubuntu, removing Snap, cloud-init and the Ubuntu Pro client, each asked.
-# apt (or pacman) installs the packages TVWCS needs with it. Supported, with systemd: Debian and its family (apt), and
-# Arch and its family (pacman; run it as your own user, since makepkg will not build as root; it needs fakeroot, from
-# base-devel, and offers to install it).
+# apt (or pacman, or dnf) installs the packages TVWCS needs with it. Supported, with systemd: Debian and its family
+# (apt), Fedora (dnf; from TVWCS 5.15.0; not its Atomic editions, see docs/INSTALL-FEDORA.md), and Arch and its family
+# (pacman; run it as your own user, since makepkg will not build as root; it needs fakeroot, from base-devel, and
+# offers to install it).
 #
 # Options: --remove removes TVWCS. --help shows this text.
 # Environment: TVWCS_VERSION=package|latest|<x.y.z> answers which version (default: asked).
@@ -32,6 +33,7 @@ SHARE=${TVWCS_SHARE:-/usr/share}
 LIB=${TVWCS_LIB:-/usr/lib/tvwcs}
 TVCONF=$CONFIG_HOME/tvwcs
 FIRST_ARCH=5.11.0                      # the first release with a PKGBUILD
+FIRST_FEDORA=5.15.0                    # the first release with an .rpm
 INCLUDE="include /usr/share/tvwcs/tvwcs.conf"
 
 # ====================================================================== talking to the person installing
@@ -71,10 +73,12 @@ choose() {
 fail() { warn ""; warn "The installation failed: $*"; exit 1; }
 
 # ====================================================================== this computer
-distro() {   # debian (Debian and its family), arch (Arch and its family) or unknown
+distro() {   # debian (Debian and its family), arch (Arch and its family), fedora or unknown (Red Hat Enterprise Linux and its rebuilds too)
     ( if [ -r "$ETC/os-release" ]; then . "$ETC/os-release"; elif [ "$ETC" = /etc ] && [ -r /usr/lib/os-release ]; then . /usr/lib/os-release; fi
+      for D in ${ID:-} ${ID_LIKE:-}; do case "$D" in rhel|centos|almalinux|rocky|ol) echo unknown; exit ;; esac; done
       for D in ${ID:-} ${ID_LIKE:-}; do case "$D" in
           debian|ubuntu|linuxmint|pop|raspbian) echo debian; exit ;;
+          fedora|nobara|ultramarine) echo fedora; exit ;;
           arch|archarm|endeavouros|cachyos|manjaro|manjaro-arm|garuda) echo arch; exit ;; esac; done; echo unknown )
 }
 os_is() {   # os_is <id>: this system is <id> or built on it (os-release's ID or ID_LIKE)
@@ -93,11 +97,12 @@ as_root() {
 pkg_installed() {   # pkg_installed <package>
     if [ -n "${TVWCS_PACKAGES+set}" ]; then case " $TVWCS_PACKAGES " in *" $1 "*) return 0 ;; *) return 1 ;; esac; fi
     if [ "$OS" = arch ]; then pacman -Q "$1" >/dev/null 2>&1; return; fi
+    if [ "$OS" = fedora ]; then rpm -q "$1" >/dev/null 2>&1; return; fi
     dpkg-query -W -f='${db:Status-Abbrev}' "$1" 2>/dev/null | grep -q '^ii'
 }
 pkg_known() {   # pkg_known <package>: installed, or removed with its settings left ("rc"), so that a purge does something
     pkg_installed "$1" && return 0
-    [ -z "${TVWCS_PACKAGES+set}" ] && [ "$OS" != arch ] || return 1
+    [ -z "${TVWCS_PACKAGES+set}" ] && [ "$OS" = debian ] || return 1
     dpkg-query -W -f='${db:Status-Abbrev}' "$1" 2>/dev/null | grep -q '^rc'
 }
 installed_version() { [ ! -f "$LIB/VERSION" ] || cat "$LIB/VERSION"; }
@@ -144,6 +149,7 @@ read_releases() {
     fetch "$API/repos/$REPO/releases/latest" "$L" 2>/dev/null || :
     LATEST=$(grep -o '"tag_name": *"[^"]*"' "$L" 2>/dev/null | sed -n '1s/.*"v\{0,1\}\([^"]*\)"$/\1/p')
     FIRST=""; [ "$OS" != arch ] || FIRST=$FIRST_ARCH   # releases before it have no PKGBUILD
+    [ "$OS" != fedora ] || FIRST=$FIRST_FEDORA          # or no .rpm
     RELEASES=$(grep -o '"tag_name": *"[^"]*"\|"draft": *[a-z]*\|"prerelease": *[a-z]*' "$T" | awk -v latest="$LATEST" -v first="$FIRST" '
         /"tag_name"/ { if (tag != "" && draft != "true") out(); tag = $0; sub(/.*: *"v?/, "", tag); sub(/"$/, "", tag); draft = ""; pre = "" }
         /"draft"/ { draft = $0; sub(/.*: */, "", draft) }
@@ -170,6 +176,13 @@ download_pkgbuild() {   # download_pkgbuild <version>: the release's PKGBUILD an
         fetch "$GITHUB/$REPO/releases/download/v$V/$F" "$D/$F" 2>/dev/null || { warn "Could not download $F for TVWCS $V from GitHub."; return 1; }
     done
 }
+download_rpm() {   # download_rpm <version>: into $WORK/rpm
+    V=$1; D=$WORK/rpm; rm -rf "$D"; mkdir -p "$D"; chmod 755 "$WORK" "$D"
+    say "Downloading TVWCS $V..."
+    F=tvwcs-$V-1.noarch.rpm
+    fetch "$GITHUB/$REPO/releases/download/v$V/$F" "$D/$F" 2>/dev/null || { warn "Could not download TVWCS $V's .rpm from GitHub."; return 1; }
+    chmod 644 "$D/$F"
+}
 download_debs() {   # download_debs <version> <packages...>: into $WORK/debs
     V=$1; shift; D=$WORK/debs; rm -rf "$D"; mkdir -p "$D"; chmod 755 "$WORK" "$D"
     say "Downloading TVWCS $V..."
@@ -180,11 +193,18 @@ download_debs() {   # download_debs <version> <packages...>: into $WORK/debs
 }
 
 # ====================================================================== where TVWCS comes from
-# An unpacked release has its .deb files next to this script.
+# An unpacked release has its .deb files (or the .rpm) next to this script.
 PACKAGED=""; PKG_VERSION=""
 find_package() {
     [ "$OS" != arch ] || return 0
     case "$0" in */*) D=$(CDPATH= cd -- "$(dirname -- "$0")" 2>/dev/null && pwd) || return 0 ;; *) return 0 ;; esac   # piped to bash: $0 is "bash"
+    if [ "$OS" = fedora ]; then
+        for F in "$D"/tvwcs-*-1.noarch.rpm; do
+            [ -f "$F" ] || continue
+            PACKAGED=$D; PKG_VERSION=${F##*/tvwcs-}; PKG_VERSION=${PKG_VERSION%-1.noarch.rpm}; return 0
+        done
+        return 0
+    fi
     for F in "$D"/tvwcs_*_all.deb; do
         [ -f "$F" ] || continue
         PACKAGED=$D; PKG_VERSION=${F##*/tvwcs_}; PKG_VERSION=${PKG_VERSION%_all.deb}; return 0
@@ -279,6 +299,9 @@ summary() {
         [ -z "$FAKEROOT" ] || say "  install fakeroot with pacman, which makepkg needs to build the package"
         say "  download TVWCS $WANT's PKGBUILD, build the package with makepkg (as $ME; it only copies files into place)"
         say "  install it with pacman, with the packages TVWCS needs (asks for your password)"
+    elif [ "$OS" = fedora ]; then
+        if [ "$WANT" = package ]; then say "  install the TVWCS $PKG_VERSION package from $PACKAGED"; else say "  download and install TVWCS $WANT"; fi
+        say "  install the packages TVWCS needs with dnf (asks for your password)"
     else
         if [ "$WANT" = package ]; then say "  install the TVWCS $PKG_VERSION packages from $PACKAGED"; else say "  download and install TVWCS $WANT"; fi
         say "  install the packages TVWCS needs with apt (asks for your password)"
@@ -307,13 +330,26 @@ install_arch() {
         fail "pacman could not install TVWCS. If it could not find a package TVWCS needs, update the system first (sudo pacman -Syu), then run this again."
     V=$WANT
 }
+install_fedora() {
+    if [ "$WANT" = package ]; then D=$WORK/rpm; mkdir -p "$D"; chmod 755 "$WORK" "$D"; V=$PKG_VERSION
+        cp "$PACKAGED/tvwcs-$V-1.noarch.rpm" "$D/"; chmod 644 "$D"/*.rpm
+    else download_rpm "$WANT" || fail "the download did not work."; V=$WANT; fi
+    # dnf only installs an older version, or the same one again, when told to
+    VERB=install; CUR=$(installed_version)
+    if [ -n "$CUR" ] && pkg_installed tvwcs; then
+        if [ "$CUR" = "$V" ]; then VERB=reinstall; elif version_lt "$V" "$CUR"; then VERB=downgrade; fi
+    fi
+    say "Installing it (dnf installs what TVWCS needs; sudo may ask for your password)..."
+    as_root dnf "$VERB" -y "$WORK/rpm/tvwcs-$V-1.noarch.rpm" || fail "dnf could not install TVWCS."
+}
 install_all() {
     if [ "$OS" = arch ]; then install_arch
+    elif [ "$OS" = fedora ]; then install_fedora
     elif [ "$WANT" = package ]; then D=$WORK/debs; mkdir -p "$D"; chmod 755 "$WORK" "$D"
         cp "$PACKAGED/tvwcs_${PKG_VERSION}_all.deb" "$D/"
         chmod 644 "$D"/*.deb; V=$PKG_VERSION
     else download_debs "$WANT" tvwcs || fail "the download did not work."; V=$WANT; fi
-    if [ "$OS" != arch ]; then
+    if [ "$OS" = debian ]; then
     set -- "$WORK/debs/tvwcs_${V}_all.deb"
     say "Installing the packages (apt asks for nothing; sudo may ask for your password)..."
     as_root apt-get update -q || warn "apt-get update did not finish; installing with the package lists there are."
@@ -339,7 +375,7 @@ remove_all() {
     say "Your settings in $TVCONF are kept unless you choose to delete them."
     ask_no "Remove TVWCS now?" || { say "Nothing was changed."; exit 0; }
     KEEP=1; ask_no "Also delete your TVWCS settings ($TVCONF)?" && KEEP="" || :
-    if [ "$OS" != arch ] && [ "$(login_screen)" = greetd ] && grep -q tvwcs-session "$ETC/greetd/config.toml" 2>/dev/null; then   # (Arch's package does this itself)
+    if [ "$OS" = debian ] && [ "$(login_screen)" = greetd ] && grep -q tvwcs-session "$ETC/greetd/config.toml" 2>/dev/null; then   # (Arch's and Fedora's packages do this themselves)
         say "greetd starts TVWCS's session: that goes from its config, and the rest of it stays."
         # as the package's prerm does: [initial_session] goes, and agreety starts a shell instead of TVWCS
         as_root sh -c 'awk -v greeter="/usr/sbin/agreety --cmd /bin/sh" '"'"'
@@ -353,6 +389,7 @@ remove_all() {
     for F in "$ETC/lightdm/lightdm.conf.d/50-tvwcs-autologin.conf" "$ETC/sddm.conf.d/50-tvwcs-autologin.conf" "$ETC/systemd/system/getty@tty1.service.d/tvwcs-autologin.conf" "$ETC/tvwcs/server-mode" "$ETC/polkit-1/rules.d/50-tvwcs-server-mode.rules"; do [ ! -f "$F" ] || as_root rm -f "$F"; done
     console_profile off || :
     if [ "$OS" = arch ]; then as_root pacman -R --noconfirm tvwcs || fail "pacman could not remove TVWCS."
+    elif [ "$OS" = fedora ]; then as_root dnf remove -y tvwcs || fail "dnf could not remove TVWCS."
     else
         # shellcheck disable=SC2046
         as_root env DEBIAN_FRONTEND=noninteractive apt-get purge -y tvwcs $(pkg_known tvwcs-boot-logo && echo tvwcs-boot-logo) || fail "apt-get could not remove TVWCS."
@@ -379,7 +416,10 @@ main() {
         exit 1
     fi
     OS=$(distro)
-    [ "$OS" != unknown ] || fail "TVWCS supports Debian and its family (apt), and Arch and its family (pacman)."
+    [ "$OS" != unknown ] || fail "TVWCS supports Debian and its family (apt), Fedora (dnf), and Arch and its family (pacman)."
+    if [ "$OS" = fedora ] && [ -e "${TVWCS_RUN:-/run}/ostree-booted" ]; then
+        fail "this is one of Fedora's Atomic editions, whose system only changes through rpm-ostree. Download the release's .rpm and layer it: sudo rpm-ostree install ./tvwcs-<version>-1.noarch.rpm, then restart. See https://github.com/$REPO/blob/main/docs/INSTALL-FEDORA.md"
+    fi
     if [ "$OS" = arch ] && [ "${1:-}" != --remove ]; then
         [ "$(id -u)" != 0 ] || fail "On Arch, run this as your own user, not as root: makepkg will not build packages as root. It asks for your password when it installs."
         have makepkg || fail "makepkg is not installed (it comes with pacman)."

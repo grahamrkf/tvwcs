@@ -1,5 +1,16 @@
 # Changelog
 
+## 5.15.0 — 2026-11-04
+
+- **Fedora support.** TVWCS runs on Fedora 42 and later, and on Nobara and Ultramarine. Each release now has `tvwcs-<version>-1.noarch.rpm` attached, built by the new `scripts/build-rpm.sh` from `packaging/fedora/tvwcs.spec.in` (in a Fedora container in the release workflow). [docs/INSTALL-FEDORA.md](docs/INSTALL-FEDORA.md) has the steps and what Fedora does differently. Red Hat Enterprise Linux and its rebuilds aren't counted as Fedora.
+  - **The installer** asks the same questions, then downloads the release's .rpm and installs it with dnf (`dnf downgrade` for an older version). It only offers releases with an .rpm (5.15.0 on), and `--remove` uses dnf.
+  - **Software updates** uses dnf: `dnf check-update` lists what is waiting, Install runs `dnf upgrade --refresh`, "Download the latest package lists" runs `dnf makecache`, and `dnf needs-restarting -r` says when a restart is due (Fedora keeps old kernels, so the usual check can't tell).
+  - **TVWCS updates** downloads the new release's .rpm and installs it with dnf, prereleases and rolling back included.
+  - **Installing what a page needs** uses Fedora's names (`pipewire-pulseaudio`, `bluez`, `openssh-server`) and starts Bluetooth's service. greetd is set up with Fedora's `greetd` user and the first console.
+  - **SELinux:** files TVWCS writes in `/etc` are relabelled with `restorecon`.
+  - **Fedora Atomic** (Silverblue, Sway Atomic...): the installer stops and explains how to layer the .rpm with `rpm-ostree install`, and Software updates points to `rpm-ostree upgrade` instead of offering dnf. TVWCS's own updates and installing a page's software from Settings don't work there yet.
+  - CI builds the .rpm in a Fedora container, installs it with dnf, lists updates as a normal user, installs Bluetooth, upgrades and rolls back TVWCS's own package, checks greetd's details and removes it again.
+
 ## 5.14.1 — 2026-11-04
 
 - **New GitHub address.** The project moved from github.com/one-moment-please/tvwcs to github.com/grahamrkf/tvwcs. The updater in Settings, the installer, the package metadata (Debian control, PKGBUILD, pyproject.toml) and the docs now use the new address, and the LICENSE copyright line names grahamrkf. Older copies keep working while GitHub redirects the old address.

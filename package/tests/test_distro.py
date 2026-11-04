@@ -15,7 +15,9 @@ class FamilyTests(unittest.TestCase):
         none=lambda _n:None
         for text,fam in (('ID=arch\n',"arch"),('ID=endeavouros\nID_LIKE=arch\n',"arch"),('ID="cachyos"\nID_LIKE="arch"\n',"arch"),
                          ('ID=manjaro\nID_LIKE=arch\n',"arch"),('ID=ubuntu\nID_LIKE=debian\n',"debian"),
-                         ('ID=linuxmint\nID_LIKE="ubuntu debian"\n',"debian"),('ID=fedora\n',"")):
+                         ('ID=linuxmint\nID_LIKE="ubuntu debian"\n',"debian"),('ID=fedora\n',"fedora"),
+                         ('ID=nobara\nID_LIKE="rhel centos fedora"\n',""),('ID=nobara\nID_LIKE=fedora\n',"fedora"),
+                         ('ID="rocky"\nID_LIKE="rhel centos fedora"\n',""),('ID=opensuse-tumbleweed\n',"")):
             self.assertEqual(distro.family(distro.parse_os_release(text),which=none),fam,text)
     def test_package_manager_when_os_release_says_nothing(self):
         self.assertEqual(distro.family({},which=lambda n:"/usr/bin/pacman" if n=="pacman" else None),"arch")

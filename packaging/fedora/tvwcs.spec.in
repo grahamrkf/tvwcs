@@ -1,0 +1,115 @@
+# TVWCS's Fedora package. scripts/build-rpm.sh fills in the version and builds tvwcs-<version>-1.noarch.rpm from the
+# same source tarball as the Arch package; each release on GitHub has the .rpm attached, which install.sh and
+# Settings' TVWCS updates install with dnf. It is built for Fedora 42 and later (dnf 5); Fedora's Atomic editions
+# can layer it with rpm-ostree (see docs/INSTALL-FEDORA.md).
+Name:           tvwcs
+Version:        @VERSION@
+Release:        1
+Summary:        TV launcher, workspace switcher and settings for sway, made for a remote
+License:        MIT AND BSD-2-Clause AND OFL-1.1 AND LicenseRef-font8x8
+URL:            https://github.com/grahamrkf/tvwcs
+Source0:        %{url}/releases/download/v%{version}/%{name}-%{version}-src.tar.gz
+BuildArch:      noarch
+BuildRequires:  python3
+
+Requires:       python3
+Requires:       python3-gobject
+Requires:       gtk4
+Requires:       pango
+Requires:       graphene
+Requires:       hicolor-icon-theme
+Requires:       sway
+Requires:       swayidle
+Requires:       swaylock
+Requires:       pulseaudio-utils
+Requires:       NetworkManager
+Requires:       udisks2
+Requires:       glib2
+Requires:       xdg-desktop-portal
+Requires:       xdg-desktop-portal-gtk
+Requires:       adwaita-icon-theme
+Requires:       open-sans-fonts
+Requires:       librsvg2
+Requires:       polkit
+Requires:       sudo
+Recommends:     pipewire-pulseaudio
+Recommends:     wireplumber
+Recommends:     bluez
+Recommends:     rsms-inter-fonts
+Recommends:     dnf5-plugins
+Recommends:     pciutils
+Suggests:       greetd
+Suggests:       openssh-server
+
+%description
+TVWCS is a Metro-style Quick Menu and applications guide for sway, with a Settings app for sound, displays, power,
+Bluetooth, the network, updates and more, all usable with a TV remote. Its "TVWCS" session at the login screen (or
+the command tvwcs at a text console) runs it in TV mode; included in a usual sway session it runs in desktop mode.
+Installing it changes no settings: the automatic login and the sway include line are set up from Settings.
+
+%prep
+%autosetup
+
+%build
+
+%install
+lib=%{buildroot}/usr/lib/tvwcs
+install -Dm644 -t "$lib/tvwcs" package/tvwcs/*.py
+install -Dm644 -t "$lib/tvwcs/retro" package/tvwcs/retro/*.ttf package/tvwcs/retro/*.png
+install -Dm644 -t "$lib/tvwcs/retro/icons/hicolor/scalable/actions" package/tvwcs/retro/icons/hicolor/scalable/actions/*.svg
+install -Dm644 VERSION "$lib/VERSION"
+# Settings' TVWCS updates then installs the next release's .rpm with dnf, not its .deb
+echo fedora > "$lib/PACKAGE"
+# compiled here, so the package owns the bytecode and removes it with the rest
+python3 -m compileall -q -d /usr/lib/tvwcs/tvwcs "$lib/tvwcs"
+install -Dm755 package/bin/tvwcs %{buildroot}/usr/bin/tvwcs
+install -Dm755 data/tvwcs-session %{buildroot}/usr/bin/tvwcs-session
+install -Dm644 data/tvwcs.conf %{buildroot}/usr/share/tvwcs/tvwcs.conf
+install -Dm644 -t %{buildroot}/usr/share/wayland-sessions data/tvwcs-sway.desktop
+install -Dm644 -t %{buildroot}/usr/share/applications data/com.tvwcs.ControlPanel.desktop
+install -Dm644 -t %{buildroot}/usr/share/icons/hicolor/scalable/apps data/tvwcs.svg data/tvwcs-settings.svg
+cp scripts/retro/FONTS.txt FONTS.txt
+
+%preun
+# Only when TVWCS is removed (not upgraded): what its Settings set up outside its own files goes, as the .deb's prerm
+# and the Arch package's pre_remove do. Without TVWCS's session, an automatic login into it would fail.
+[ "$1" -eq 0 ] || exit 0
+if [ -f /etc/systemd/system/getty@tty1.service.d/tvwcs-autologin.conf ]; then
+  rm -f /etc/systemd/system/getty@tty1.service.d/tvwcs-autologin.conf
+  rmdir /etc/systemd/system/getty@tty1.service.d 2>/dev/null || true
+  [ -d /run/systemd/system ] && systemctl daemon-reload || true
+fi
+# greetd: only what TVWCS added goes (the automatic login into its session, and agreety starting it after the
+# password, which then starts a shell); the greeter, console and anything else in the file stay as they are.
+if grep -q tvwcs-session /etc/greetd/config.toml 2>/dev/null; then
+  awk -v greeter="/usr/bin/agreety --cmd /bin/sh" '
+      function flush() { if (held != "" && held !~ /tvwcs-session/) { sub(/\n$/, "", held); print held }; held = "" }
+      /^[ \t]*\[/ { flush(); s = $0; gsub(/[ \t]/, "", s); sub(/^\[/, "", s); sub(/\].*/, "", s) }
+      s == "initial_session" { held = held $0 "\n"; next }
+      s == "default_session" && /^[ \t]*command[ \t]*=/ && /tvwcs-session/ { print "command = \"" greeter "\""; next }
+      { print }
+      END { flush() }' /etc/greetd/config.toml > /etc/greetd/config.toml.tvwcs-new
+  cat /etc/greetd/config.toml.tvwcs-new > /etc/greetd/config.toml; rm -f /etc/greetd/config.toml.tvwcs-new
+  echo "greetd no longer starts TVWCS (/etc/greetd/config.toml)."
+fi
+rm -f /etc/lightdm/lightdm.conf.d/50-tvwcs-autologin.conf /etc/sddm.conf.d/50-tvwcs-autologin.conf
+# server mode's switch and polkit rule
+rm -f /etc/tvwcs/server-mode /etc/polkit-1/rules.d/50-tvwcs-server-mode.rules
+rmdir /etc/tvwcs 2>/dev/null || true
+exit 0
+
+%files
+%license LICENSE FONTS.txt
+%doc README.md CHANGELOG.md docs/INSTALL-FEDORA.md
+/usr/lib/tvwcs/
+/usr/bin/tvwcs
+/usr/bin/tvwcs-session
+/usr/share/tvwcs/
+/usr/share/wayland-sessions/tvwcs-sway.desktop
+/usr/share/applications/com.tvwcs.ControlPanel.desktop
+/usr/share/icons/hicolor/scalable/apps/tvwcs.svg
+/usr/share/icons/hicolor/scalable/apps/tvwcs-settings.svg
+
+%changelog
+* @DATE@ TVWCS <https://github.com/grahamrkf/tvwcs> - @VERSION@-1
+- See /usr/share/doc/tvwcs/CHANGELOG.md
