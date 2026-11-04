@@ -2,7 +2,7 @@
 
 ## 5.14.1 — 2026-11-04
 
-- **New GitHub address.** The project moved from github.com/one-moment-please/tvwcs to github.com/grahamrkf/tvwcs. The updater in Settings, the installer, the package metadata (Debian control, PKGBUILD, pyproject.toml) and the docs now use the new address. Older copies keep working while GitHub redirects the old address.
+- **New GitHub address.** The project moved from github.com/one-moment-please/tvwcs to github.com/grahamrkf/tvwcs. The updater in Settings, the installer, the package metadata (Debian control, PKGBUILD, pyproject.toml) and the docs now use the new address, and the LICENSE copyright line names grahamrkf. Older copies keep working while GitHub redirects the old address.
 
 ## 5.14.0 — 2026-10-31
 
