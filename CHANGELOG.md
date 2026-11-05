@@ -1,5 +1,9 @@
 # Changelog
 
+## 5.16.0 — 2026-11-05
+
+- **The Quick Menu's search bar can fold away.** Turn off **Settings › Appearance › Search bar on the Quick Menu** and a search icon takes its place at the start of the status row, beside the network and volume icons. Selecting the icon unfolds the full-width search bar ready to type in, and typing anywhere in the Quick Menu unfolds it with the keys already typed in it (a channel number too). It folds away again once the selection leaves it with nothing typed, with Back/Esc (which also clears it), or with the icon again. With the bar folded, the Quick Menu opens on the row nearest it.
+
 ## 5.15.0 — 2026-11-04
 
 - **Fedora support.** TVWCS runs on Fedora 42 and later, and on Nobara and Ultramarine. Each release now has `tvwcs-<version>-1.noarch.rpm` attached, built by the new `scripts/build-rpm.sh` from `packaging/fedora/tvwcs.spec.in` (in a Fedora container in the release workflow). [docs/INSTALL-FEDORA.md](docs/INSTALL-FEDORA.md) has the steps and what Fedora does differently. Red Hat Enterprise Linux and its rebuilds aren't counted as Fedora.

@@ -33,6 +33,7 @@ class TVWCSWindow(Gtk.ApplicationWindow):
     Applications pane opens beside it, to its right (to its left with the Quick Menu in a right-hand corner).
     The Quick Menu is built for the bottom-left corner. In a right-hand corner GTK lays it out right to left (mirror);
     in a top corner its stacks are put the other way up (flip_children) and ↑/↓ work the other way round."""
+    search_folds=False; search_line=None; search_button=None   # the search_icon setting (_build_quick_pane)
     def __init__(self, app):
         super().__init__(application=app,title=MAIN_TITLE)
         self.app=app; self.guide_open=False; self.options_open=False
@@ -155,6 +156,9 @@ class TVWCSWindow(Gtk.ApplicationWindow):
         self.channel_hint=Gtk.Label(label="Channel number or search"); self.channel_hint.add_css_class("channel-hint")
         self.channel_hint.set_xalign(0); self.channel_hint.set_hexpand(True); self.channel_hint.set_wrap(True); line.append(self.channel_hint)
         body.append(line); self._search_narrow=None; self._shape_search()
+        # With the search_icon setting the bar stays folded away until the search icon (in the status row) opens it, or
+        # typing anywhere does; it folds again once the selection leaves it empty (_fold_search).
+        self.search_line=line; self.search_folds=bool(self.app.store.settings.get("search_icon",False)); line.set_visible(not self.search_folds)
         # what a status icon (or ⏻) unfolds: above the status row, a little indented, like a row's options
         self.status_panel=Gtk.Box(orientation=Gtk.Orientation.VERTICAL,spacing=S(4)); self.status_panel.add_css_class("status-panel"); self.status_panel.set_visible(False)
         self.status_panel.set_margin_start(S(34)); self.status_panel.set_margin_end(S(34)); self.status_panel.set_margin_bottom(S(4)); pane.append(self.status_panel)
@@ -198,7 +202,11 @@ class TVWCSWindow(Gtk.ApplicationWindow):
         The icons are refreshed by main.StatusWatcher."""
         bar=Gtk.Box(orientation=Gtk.Orientation.VERTICAL,spacing=S(2)); bar.add_css_class("quick-status")
         icons=Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL,spacing=S(4)); bar.append(icons)
-        self._status_buttons={}
+        self._status_buttons={}; self.search_button=None
+        if self.search_folds:   # first, nearest the corner: it stays put while the others come and go
+            b=Gtk.Button(); b.add_css_class("square"); b.add_css_class("status-icon"); b.set_valign(Gtk.Align.CENTER)
+            b.set_child(glyph("edit-find-symbolic","⌕",22)); b.set_tooltip_text("Search, or type a channel number")
+            b.connect("clicked",lambda *_:self.toggle_search()); icons.append(b); self.search_button=b
         for key in self.STATUS_KEYS:
             b=Gtk.Button(); b.add_css_class("square"); b.add_css_class("status-icon"); b.set_valign(Gtk.Align.CENTER)
             if key=="updates": b.connect("clicked",lambda *_:self.app.open_settings("updates"))
@@ -219,7 +227,7 @@ class TVWCSWindow(Gtk.ApplicationWindow):
         # window manager where TVWCS is, and an answer from before the click showed it again instead of closing it)
         guide.connect("clicked",lambda *_:self.app.show_panels(not self.guide_open,False,focus="guide" if not self.guide_open else "quick"))
         line.append(guide); self.guide_button=guide
-        self._status_group=NavGroup(list(self._status_buttons.values())); self._clock_group=NavGroup([clock,guide])
+        self._status_group=NavGroup(([self.search_button] if self.search_button else [])+list(self._status_buttons.values())); self._clock_group=NavGroup([clock,guide])
         pointer_only(*self._status_group,*self._clock_group)
         self._status_shown=None; self.tick_clock(); self.show_status(self.app.status)
         self._flip(bar)   # the clock's row is nearest the corner
@@ -915,7 +923,30 @@ class TVWCSWindow(Gtk.ApplicationWindow):
         if 0<=index<len(self._result_mains): scroll_to_show(self.results_scroll,self._result_mains[index])
     def _type_to_search(self,text):
         e=self.search_entry; value=e.get_text()+text
-        e.grab_focus(); e.set_text(value); e.set_position(-1)
+        self._show_search(); e.grab_focus(); e.set_text(value); e.set_position(-1)
+    def _show_search(self):
+        """Unfold the search bar (search_icon setting); it is always there otherwise."""
+        if self.search_line.get_visible(): return
+        self.search_line.set_visible(True); self.search_button.add_css_class("active"); self.app.fit_quick_menu()
+    def _hide_search(self):
+        if not self.search_folds or not self.search_line.get_visible(): return
+        self.search_line.set_visible(False); self.search_button.remove_css_class("active"); self.app.fit_quick_menu()
+    def toggle_search(self):
+        """The search icon: unfold the search bar and type in it; again, fold it away (and what was typed)."""
+        if self.search_line.get_visible():
+            self.search_entry.set_text(""); self._hide_search(); self.search_button.grab_focus(); return
+        self._show_search(); self.search_entry.grab_focus()
+    def _fold_search(self,focused):
+        """Fold the search bar away once the selection has left it with nothing typed (not for a dialog: the on-screen
+        keyboard, opened from it, types into it)."""
+        if not self.search_folds or focused is None or self._modal_groups or self._popovers: return
+        if self.search_line.get_visible() and not self._in_search(focused) and not self.search_entry.get_text().strip(): self._hide_search()
+    def _nearest_row(self):
+        """The search bar folded away: the row next to where it would be (the lists' lowest row, else the search icon)."""
+        for g in reversed(self._groups["quick"]):
+            w=self._landing(g)
+            if w is not None and w.grab_focus(): return True
+        return self.search_button.grab_focus()
 
     # ---------------------------------------------------------- remote / keyboard navigation
     def _register(self,pane,*widgets,entry=None):
@@ -926,7 +957,7 @@ class TVWCSWindow(Gtk.ApplicationWindow):
     def _focus_changed(self,*_):
         w=self.get_focus()
         if w is not None: self._last_focus[self._pane_of(w)]=w
-        self._fold_options(w)
+        self._fold_options(w); self._fold_search(w)
     def _fold_options(self,focused):
         """Fold a Quick Menu row's options (or a status panel) away once the selection has left them and their row (or
         icon). Not while a pop-up or a dialog opened from one of them is up, nor while a panel is redrawn."""
@@ -980,10 +1011,11 @@ class TVWCSWindow(Gtk.ApplicationWindow):
     def focus_pane(self,pane):
         """Select something in a pane: where the selection last was in it, else its first row. "search": the Quick
         Menu's search field, whatever was selected before (GTK selects the first button when the window appears)."""
-        if pane=="search": return self.search_entry.grab_focus()
+        folded=self.search_folds and not self.search_line.get_visible()
+        if pane=="search": return self._nearest_row() if folded else self.search_entry.grab_focus()
         last=self._last_focus.get(pane)
         if last is not None and usable(last) and last.grab_focus(): return True
-        if pane=="quick": return self.search_entry.grab_focus()
+        if pane=="quick": return self._nearest_row() if folded else self.search_entry.grab_focus()
         return self._focus_first(self._groups[pane])
     def focus_pane_soon(self,pane,prefer=None):
         """Focus once a freshly shown panel has been mapped: `prefer` if it is still there, else focus_pane(pane)."""
@@ -1108,6 +1140,8 @@ class TVWCSWindow(Gtk.ApplicationWindow):
             if spec: self._end_capture(spec)
     def _escape(self):
         if self._modal_groups: (self._modal_back or self.close_modal)(); return
+        if self.search_folds and self.search_line.get_visible() and self._in_search(self.get_focus()):
+            self.toggle_search(); return   # Back folds the search bar away first, back onto the search icon
         row=self._open_row
         if row is not None and row.expanded():   # Back folds open options (or a status panel) first, back onto their row
             back=getattr(row,"opener",None) or getattr(row,"entry",None)

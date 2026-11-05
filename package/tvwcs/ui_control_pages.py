@@ -279,6 +279,8 @@ class AppearancePage(_ConfigPage):
         self.option("Close TVWCS when it loses focus","close_on_click_outside","Clicking another window, or another window opening, closes the Quick Menu.")
         self.option("Options buttons (⋯) on Quick Menu rows","hide_options_buttons","Even hidden, a row's options open by pressing "
                     +("→" if corner_right(st["quick_corner"]) else "←")+" on it, or by right-clicking it.",invert=True)
+        self.option("Search bar on the Quick Menu","search_icon","Off: a search icon beside the status icons opens it. Typing "
+                    "anywhere in the Quick Menu opens it too, with what was typed already in it.",invert=True)
         self.row("Quick Menu corner",CORNERS[st["quick_corner"]],self.choose_corner,ident="opt:quick_corner")
         self.note("The corner of the screen the Quick Menu sits in. Its layout mirrors to match: in a right-hand corner it runs "
                   "right to left and Applications opens to its left; in a top corner its lists and menus open downwards.")
