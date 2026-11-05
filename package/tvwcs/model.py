@@ -134,6 +134,7 @@ DEFAULT_SETTINGS={
     "scale_4k":False,               # the interface size is sized for a 4K screen (UHD_FACTOR larger)
     "close_on_click_outside":True,  # close TVWCS when it loses focus (another window takes it)
     "hide_options_buttons":False,   # hide the Quick Menu rows' ⋯ buttons; ← on a row (or a right-click) still opens its options
+    "search_icon":False,            # hide the Quick Menu's search bar behind a search icon in the status row (typing still opens it)
     "update_prereleases":False,     # TVWCS's updater also offers prereleases (releases not yet tested and marked latest)
     "clock_24h":False,              # the Quick Menu's clock shows 14:05 instead of 2:05 PM
     "quick_corner":DEFAULT_CORNER,  # CORNERS: where the Quick Menu sits, its layout mirrored to match
@@ -203,7 +204,7 @@ def _clean_settings(raw) -> dict:
     if isinstance(raw.get("wallpaper"),str) and raw["wallpaper"].lower() in WALLPAPERS: s["wallpaper"]=raw["wallpaper"].lower()
     if raw.get("keyboard") in KEYBOARDS: s["keyboard"]=raw["keyboard"]
     if raw.get("channel_digits") in CHANNEL_DIGITS and not isinstance(raw["channel_digits"],bool): s["channel_digits"]=raw["channel_digits"]
-    for key in ("close_on_click_outside","hide_options_buttons","update_prereleases","clock_24h","channel_zero_done",
+    for key in ("close_on_click_outside","hide_options_buttons","search_icon","update_prereleases","clock_24h","channel_zero_done",
                 "audio_boost","lock_at_start"):
         if isinstance(raw.get(key),bool): s[key]=raw[key]
     s["hotkeys"]=clean_hotkeys(raw.get("hotkeys"))

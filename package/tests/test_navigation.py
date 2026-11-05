@@ -167,6 +167,27 @@ class NavigationTests(unittest.TestCase):
     def test_back_folds_open_options_onto_their_row(self):
         win=make_window(); g,toggle,opt,main=options_row(win,expanded=True); g.collapse=MagicMock(); win._open_row=g; W.focus=opt
         ui_window.TVWCSWindow._escape(win); g.collapse.assert_called_once(); self.assertIs(W.focus,main); win.app.hide_window.assert_not_called()
+    def folding_search(self,shown=True,text=""):
+        win=make_window(search_folds=True,_popovers=0); line=W("line"); line.visible=shown
+        line.get_visible=lambda:line.visible; line.set_visible=lambda v:setattr(line,"visible",v)
+        win.search_line=line; win.search_button=MagicMock(); win.search_entry.parent=line
+        win.search_entry.get_text=lambda:text; win.search_entry.set_text=MagicMock(); win.search_entry.set_position=MagicMock(); return win,line
+    def test_the_search_bar_folds_away_when_left_empty(self):
+        win,line=self.folding_search(); win._fold_search(win.search_entry); self.assertTrue(line.visible)   # still typing
+        win._modal_groups=[[W("key")]]; win._fold_search(W("key")); self.assertTrue(line.visible)   # its on-screen keyboard
+        win._modal_groups=[]; win._fold_search(W("row")); self.assertFalse(line.visible)
+        win,line=self.folding_search(text="fire"); win._fold_search(W("result")); self.assertTrue(line.visible)   # a search stays open
+    def test_typing_unfolds_the_search_bar_with_the_key_typed(self):
+        win,line=self.folding_search(shown=False); del win._type_to_search
+        win._type_to_search("f"); self.assertTrue(line.visible); win.search_entry.set_text.assert_called_with("f"); self.assertIs(W.focus,win.search_entry)
+    def test_the_quick_menu_opens_beside_a_folded_search_bar(self):
+        win,line=self.folding_search(shown=False); row=W("fav"); win._groups["quick"].append(NavGroup([row]))
+        win.focus_pane("search"); self.assertIs(W.focus,row)
+        line.visible=True; win.focus_pane("search"); self.assertIs(W.focus,win.search_entry)
+    def test_back_folds_the_search_bar_onto_its_icon(self):
+        win,line=self.folding_search(text="fi"); W.focus=win.search_entry; win._open_row=None
+        ui_window.TVWCSWindow._escape(win); self.assertFalse(line.visible); win.search_entry.set_text.assert_called_with("")
+        win.search_button.grab_focus.assert_called_once(); win.app.hide_window.assert_not_called()
     def lanes(self):
         guide=W("guide_pane"); win=make_window(guide_open=True,guide_pane=guide); rows={}
         for lane in (0,1):
