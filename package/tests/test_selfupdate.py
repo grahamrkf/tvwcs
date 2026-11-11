@@ -2,7 +2,7 @@ import os, tempfile, unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from tvwcs import selfupdate
+from tvwcs import selfupdate, vendor
 from tvwcs.selfupdate import Release, UpdateError
 
 def release_json(tag="v5.0.0",names=("tvwcs_5.0.0_all.deb",)):
@@ -29,7 +29,7 @@ class ReleaseTests(unittest.TestCase):
         self.assertEqual((newest.version,newest.prerelease),("5.1.0",True))   # not the draft, 4.x's zip or the one without a .deb
         self.assertIsNone(selfupdate.newest_release([])); self.assertIsNone(selfupdate.newest_release({"message":"rate limited"}))
         answers={selfupdate.LATEST_URL:release_json("v5.0.2",("tvwcs_5.0.2_all.deb",)),selfupdate.RELEASES_URL:listing}
-        with patch.object(selfupdate,"_get_json",answers.get):
+        with patch.object(selfupdate,"_get_json",answers.get), patch.object(selfupdate,"source",lambda:vendor.Updates("github")):
             self.assertEqual(selfupdate.latest_release().version,"5.0.2")
             self.assertEqual(selfupdate.latest_release(prereleases=True).version,"5.1.0")
             answers[selfupdate.RELEASES_URL]=[dict(release_json("v5.0.1",("tvwcs_5.0.1_all.deb",)),prerelease=True)]

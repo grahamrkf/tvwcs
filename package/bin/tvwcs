@@ -10,11 +10,12 @@ done
 PYTHONPATH="$ROOT${PYTHONPATH:+:$PYTHONPATH}"
 export PYTHONPATH
 # `tvwcs help`, the volume keys (`tvwcs volume up|down`), server mode's commands and plain `tvwcs` over SSH (a menu: start TVWCS on the
-# computer's screen, server mode) need no GTK (usage.py, servermode.py). The older spellings -s, --server-mode,
+# computer's screen, server mode) and `tvwcs vendor` need no GTK (usage.py, servermode.py). The older spellings -s, --server-mode,
 # --no-server-mode, --start and --user= still work.
 case "${1:-}" in
     help|-h|--help) exec python3 -m tvwcs.usage ;;
     volume) exec python3 -m tvwcs.control_sound "$@" ;;
+    vendor) exec python3 -m tvwcs.vendor ;;
     server-mode|start-session|-s|--server-mode|--no-server-mode|--start|--user=*) exec python3 -m tvwcs.servermode cli "$@" ;;
 esac
 # `tvwcs session`, and plain `tvwcs` at a text console (no graphical session): TVWCS's own sway session, in TV mode.

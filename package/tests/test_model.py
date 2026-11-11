@@ -119,7 +119,8 @@ class SettingsAndProfileTests(unittest.TestCase):
                                                     "button_hints":True,"quick_close_button":False,"password_keyboard":"digits"}}))
             store=ConfigStore(path); store.save(); saved=json.loads(path.read_text())["settings"]
             for key in ("use","apps_open","reduce_motion","tvwcs_lock_screen","button_hints","quick_close_button","password_keyboard"): self.assertNotIn(key,saved)
-            self.assertEqual(saved["scale"],"")   # the size the old "Used on: A TV" chose: automatic now, by the mode
+            self.assertNotIn("scale",saved)   # the size the old "Used on: A TV" chose: automatic now, by the mode (the default, so not saved)
+            self.assertEqual(ConfigStore(path).settings["scale"],"")
     def test_accent_names_and_key_hints(self):
         self.assertEqual(accent_name("#E81123"),"Red"); self.assertEqual(accent_name("#123456"),"#123456")
         self.assertIn(DEFAULT_SETTINGS["accent"],ACCENT_NAMES); self.assertTrue(MARGIN_RANGE[0]<=DEFAULT_SETTINGS["margin"]<=MARGIN_RANGE[1])

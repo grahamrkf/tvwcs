@@ -1,5 +1,15 @@
 # Changelog
 
+## 5.21.0 — 2026-11-11
+
+- **Vendor files for systems that ship TVWCS.** A distribution or a ready-made TV image can put a `/usr/share/tvwcs/vendor.json` in its own package, and an administrator can add `/etc/tvwcs/defaults.json`, to set:
+  - **where TVWCS's updates come from:** the system's own package repository (`"system"`), a fork's GitHub releases, a release list on the vendor's site, or nowhere;
+  - **the defaults users start from:** any setting (theme, hotkeys, idle times, and so on), starter channels and favorites for the vendor's apps, and the app to open at login;
+  - **a name and support page**, shown in **Settings › System information**.
+  `tvwcs vendor` shows what TVWCS read and what it skipped. See [docs/VENDORS.md](docs/VENDORS.md).
+- **TVWCS's own updater now comes from its package.** By default TVWCS assumes a distribution packaged it and updates it with the rest of the system, so Settings shows no GitHub check. The .deb, .rpm and Arch package attached to TVWCS's GitHub releases now include `/usr/lib/tvwcs/updates.json`, which turns the GitHub check back on, so nothing changes for anyone who installed TVWCS from GitHub. A vendor's file wins over it. When you build the packages yourself, `TVWCS_NO_UPDATER=1` leaves it out.
+- **Only changed settings are saved.** `config.json` now keeps only the settings that differ from the defaults (and from a vendor's presets), so a setting you never touched follows the defaults when they change. Settings already saved keep their values.
+
 ## 5.20.1 — 2026-11-11
 
 - **A display's scale survives updates.** When TVWCS has sway reload its config (after an update since 5.19.1, or when hotkeys change), sway drops the scale, resolution and arrangement set in **Settings › Displays** and goes back to its own defaults, which is 200 % on many laptops with a 2K screen. TVWCS now puts the saved display settings back straight after each reload it makes.

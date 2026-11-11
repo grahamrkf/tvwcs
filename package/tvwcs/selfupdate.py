@@ -5,11 +5,16 @@ release" is also what a prerelease rolls back to.
 
 A release has one .deb, tvwcs. (5.0.x also had tvwcs-boot-logo; the tvwcs package now conflicts with it, so apt
 removes it with the update.) From 5.15.0 it also has an .rpm for Fedora, which is installed the same way with dnf.
-No GTK here, so it can be tested without a display; the Settings panel runs these calls on a worker thread."""
+A vendor that ships TVWCS can point this elsewhere in its vendor.json (vendor.py): its fork's GitHub releases, a
+release list on its own site in the same form as GitHub's answer, or nowhere ("system": its package repository
+delivers TVWCS; "off"). No GTK here, so it can be tested without a display; the Settings panel runs these calls on a
+worker thread."""
 from __future__ import annotations
 import json, os, re, shutil, subprocess, tempfile, urllib.error, urllib.request
 from dataclasses import dataclass
 from pathlib import Path
+
+from tvwcs import vendor
 
 GITHUB_REPO="grahamrkf/tvwcs"
 LATEST_URL=f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest"
@@ -69,20 +74,69 @@ def _open(url,accept):
     req=urllib.request.Request(url,headers={"Accept":accept,"User-Agent":"TVWCS-updater"})
     return urllib.request.urlopen(req,timeout=TIMEOUT)
 
+def source():
+    """Where TVWCS's own updates come from: vendor.Updates (source github, url, system or off)."""
+    return vendor.load(report=False).updates
+
+def repo(updates=None):
+    """The GitHub repository whose releases are TVWCS's updates."""
+    u=updates or source()
+    return u.repo if u.source=="github" and u.repo else GITHUB_REPO
+
+def self_updates(updates=None):
+    """Settings offers to check for and install TVWCS updates itself (not when the system's packages deliver them,
+    or the vendor turned them off)."""
+    return (updates or source()).source in ("github","url")
+
+def where(updates=None):
+    """Where the updates are looked for, for Settings' note: "GitHub (owner/name)" or the release list's site."""
+    u=updates or source()
+    if u.source=="url": return re.sub(r"^https://([^/]+).*$",r"\1",u.url)
+    return f"GitHub ({repo(u)})"
+
+def installer_url(updates=None):
+    """Where the installer for the latest release is (for Arch, which builds TVWCS with it)."""
+    return f"https://github.com/{repo(updates)}/releases/latest/download/install.sh"
+
 def _get_json(url):
     try:
         with _open(url,"application/vnd.github+json") as r: return json.loads(r.read().decode("utf-8"))
     except urllib.error.HTTPError as exc:
-        if exc.code==404: raise UpdateError(f"No published release was found for {GITHUB_REPO} on GitHub.") from exc
-        raise UpdateError(f"GitHub answered {exc.code} {exc.reason}.") from exc
+        if exc.code==404: raise UpdateError(f"No published release was found at {_host(url)}.") from exc
+        raise UpdateError(f"{_host(url)} answered {exc.code} {exc.reason}.") from exc
     except (urllib.error.URLError,OSError,ValueError) as exc:
-        raise UpdateError(f"Could not reach GitHub: {getattr(exc,'reason',exc)}") from exc
+        raise UpdateError(f"Could not reach {_host(url)}: {getattr(exc,'reason',exc)}") from exc
 
-def latest_release(prereleases=False):
-    """The release marked latest on GitHub; with prereleases, the newest release of all, when that is newer."""
-    latest=release_from_json(_get_json(LATEST_URL))
+def _host(url):
+    return "GitHub" if url.startswith("https://api.github.com/") else re.sub(r"^https?://([^/]+).*$",r"\1",url)
+
+def _from_list(items, prereleases):
+    """A vendor's release list: GitHub's /releases answer, or {"releases": [...]} with the same entries. The latest
+    release is the newest that is not a prerelease."""
+    if isinstance(items,dict): items=items.get("releases")
+    if not isinstance(items,list): raise UpdateError("The release list is not in the form TVWCS reads (a list of releases).")
+    newest=newest_release([r for r in items if prereleases or not (isinstance(r,dict) and r.get("prerelease"))])
+    if newest is None: raise UpdateError("The release list has no release with a TVWCS package.")
+    return newest
+
+def _https(release):
+    """A vendor's list may only send TVWCS to https:// downloads."""
+    for u in [*release.debs.values(),*([release.rpm] if release.rpm else [])]:
+        if not str(u).startswith("https://"): raise UpdateError("The release list names a download that is not https://.")
+    return release
+
+def latest_release(prereleases=False, updates=None):
+    """The release marked latest (on GitHub, or in the vendor's list); with prereleases, the newest release of all,
+    when that is newer."""
+    u=updates or source()
+    if u.source=="url": return _https(_from_list(_get_json(u.url),prereleases))
+    if u.source!="github": raise UpdateError("TVWCS is updated with this system's own updates.")
+    r=repo(u)
+    latest_url,releases_url=(LATEST_URL,RELEASES_URL) if r==GITHUB_REPO else \
+        (f"https://api.github.com/repos/{r}/releases/latest",f"https://api.github.com/repos/{r}/releases?per_page=30")
+    latest=release_from_json(_get_json(latest_url))
     if not prereleases: return latest
-    newest=newest_release(_get_json(RELEASES_URL))
+    newest=newest_release(_get_json(releases_url))
     return newest if newest is not None and is_newer(newest.version,latest.version) else latest
 
 def packaged(package_dir=None):
