@@ -17,6 +17,7 @@ class Status:
     updates: int=0           # updates waiting (system packages), from the last check
     battery: int|None=None   # the computer's battery in percent; None without one
     power: str=""            # "battery" (running on it), "charging", or "plugged" (plugged in, not charging: full)
+    reboot: bool=False       # an update needs a restart to take effect (a new kernel), from the last check
 
 # ---------------------------------------------------------------------- network
 def default_interface(route_text):
@@ -89,6 +90,13 @@ def count_updates():
     except Exception: return 0   # a broken package manager never breaks the Quick Menu
     return s.all_total if s.available else 0
 
+def check_updates():
+    """-> (updates waiting, whether a restart is needed to finish the last update)."""
+    from tvwcs import control_updates
+    try: reboot=control_updates.reboot_needed()
+    except Exception: reboot=False
+    return count_updates(),reboot
+
 # ---------------------------------------------------------------------- battery
 def read_battery(root=None):
     """-> (percent or None, "battery" | "charging" | "plugged" | "")."""
@@ -97,9 +105,9 @@ def read_battery(root=None):
     if not b.present: return None,""
     return b.percent,("battery" if b.on_battery else "charging" if b.charging else "plugged")
 
-def read(updates=0):
+def read(updates=0, reboot=False):
     network,signal=read_network(); volume,muted=read_volume(); battery,power=read_battery()
-    return Status(network,signal,volume,muted,read_bluetooth(),updates,battery,power)
+    return Status(network,signal,volume,muted,read_bluetooth(),updates,battery,power,reboot)
 
 # ---------------------------------------------------------------------- what each icon shows
 def network_icon(s):
@@ -132,4 +140,9 @@ def battery_icon(s):
     return f"battery-level-{level}-symbolic","🔋",f"Battery {s.battery}%, on battery"
 
 def updates_icon(s):
-    return "software-update-available-symbolic","⟳",f"{s.updates} update{'s' if s.updates!=1 else ''} available"
+    """Updates waiting, or (after an update that needs it) a restart to finish updating."""
+    waiting=f"{s.updates} update{'s' if s.updates!=1 else ''} available"
+    if s.reboot: return "system-reboot-symbolic","↻","Restart to finish updating"+(f" ({waiting})" if s.updates else "")
+    return "software-update-available-symbolic","⟳",waiting
+
+def updates_shown(s): return s.updates>0 or s.reboot

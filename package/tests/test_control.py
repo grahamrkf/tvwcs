@@ -379,7 +379,24 @@ class UpdatesTests(unittest.TestCase):
         self.assertEqual(upd.age_text(None),"")
         self.assertTrue(upd.reboot_needed("6.9",exists=lambda p:p=="/run/reboot-required"))
         self.assertTrue(upd.reboot_needed("6.9",exists=lambda p:p=="/usr/lib/modules"))   # the running kernel's modules are gone
-        self.assertFalse(upd.reboot_needed("6.9",exists=lambda p:p in ("/usr/lib/modules","/usr/lib/modules/6.9")))
+        self.assertFalse(upd.reboot_needed("6.9",exists=lambda p:p in ("/usr/lib/modules","/usr/lib/modules/6.9"),listdir=lambda d:["6.9"]))
+    def test_a_newer_kernel_needs_a_restart(self):
+        # Debian 13 after an update: no /run/reboot-required, and the running kernel stays installed beside the new one
+        run="6.12.115+deb13-amd64"; new="6.12.116+deb13-amd64"
+        files={"/usr/lib/modules",f"/usr/lib/modules/{run}",f"/boot/vmlinuz-{run}",f"/boot/vmlinuz-{new}"}
+        mods=lambda extra:(lambda d:[run]+extra if d=="/usr/lib/modules" else (_ for _ in ()).throw(OSError()))
+        self.assertTrue(upd.reboot_needed(run,exists=files.__contains__,dnf=False,listdir=mods([new])))
+        self.assertFalse(upd.reboot_needed(run,exists=files.__contains__,dnf=False,listdir=mods([])))
+        self.assertFalse(upd.reboot_needed(new,exists=lambda p:p in files or p==f"/usr/lib/modules/{new}",dnf=False,listdir=mods([new])))   # restarted
+        old="6.12.110+deb13-amd64"   # an older kernel kept, or a removed one's folder: no restart
+        self.assertFalse(upd.newer_kernel_installed(run,mods([old]),files.__contains__))
+        self.assertFalse(upd.newer_kernel_installed(run,mods(["6.12.120+deb13-amd64"]),files.__contains__))   # folder left, no image
+        self.assertFalse(upd.newer_kernel_installed(run,mods(["6.12.120+deb13-rt-amd64"]),lambda p:True))      # another kind
+        # Ubuntu, and Fedora's vmlinuz beside the modules
+        self.assertTrue(upd.newer_kernel_installed("6.8.0-48-generic",lambda d:["6.8.0-48-generic","6.8.0-49-generic"],
+                                                   lambda p:p=="/boot/vmlinuz-6.8.0-49-generic"))
+        self.assertTrue(upd.newer_kernel_installed("6.11.4-301.fc41.x86_64",lambda d:["6.11.10-300.fc41.x86_64"],
+                                                   lambda p:p.endswith("6.11.10-300.fc41.x86_64/vmlinuz")))
 
 class SysinfoTests(unittest.TestCase):
     def test_parsers(self):

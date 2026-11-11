@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- **TVWCS says when an update needs a restart.** Debian keeps the running kernel installed beside a new one and (without reboot-notifier) leaves no marker, so after a kernel update Settings never asked for a restart. Settings now also notices an installed kernel newer than the running one, of the same kind. When an update finishes and a restart is needed, it offers to restart straight away, and the Quick Menu's updates icon turns into a restart icon (**Restart to finish updating**) until you do.
 - **A session that ends by itself leaves a trace.** Login screens such as greetd drop everything sway prints, so when sway quit back to the login screen nothing said why. TVWCS's session now sends sway's messages (and the launcher's and apps', which share them) to the journal: `journalctl -b -t sway`. At a text console they still show on screen.
 
 ## 5.20.1 — 2026-11-11
