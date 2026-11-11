@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 5.21.0 — 2026-11-11
 
 - **Switch to the app used last with Super+Tab.** Like a TV remote's previous channel button: **Super+Tab** brings back the app you used before the one on screen (in TV mode its workspace, full screen as it was), and pressing it again goes back, so it flips between two apps. Over the Quick Menu it switches from the app the menu is shown over; with no other app open it says so in the Quick Menu.
   - **Settings › Remote and hotkeys** has a new **Last app hotkeys** section: a key for the keyboard (Super+Tab), the remote and the gamepad (none until you choose one), and on a computer with an HDMI-CEC port the TV remote's button (**Previous channel**, often labelled PRE-CH, Recall or Last). **Reset all hotkeys** sets them back too.
