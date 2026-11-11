@@ -61,6 +61,8 @@ install -Dm644 -t "$lib/tvwcs/retro/icons/hicolor/scalable/actions" package/tvwc
 install -Dm644 VERSION "$lib/VERSION"
 # Settings' TVWCS updates then installs the next release's .rpm with dnf, not its .deb
 echo fedora > "$lib/PACKAGE"
+# TVWCS's own update check, for its GitHub releases (vendor.py); left out with TVWCS_NO_UPDATER=1
+[ -n "${TVWCS_NO_UPDATER:-}" ] || install -Dm644 packaging/common/updates.json "$lib/updates.json"
 # compiled here, so the package owns the bytecode and removes it with the rest
 python3 -m compileall -q -d /usr/lib/tvwcs/tvwcs "$lib/tvwcs"
 install -Dm755 package/bin/tvwcs %{buildroot}/usr/bin/tvwcs

@@ -39,6 +39,7 @@ jobs:
         run: |
           tvwcs help
           test "$(cat /usr/lib/tvwcs/PACKAGE)" = fedora
+          tvwcs vendor | grep -q "GitHub releases of grahamrkf/tvwcs"   # the package turns TVWCS's own updater on (updates.json)
           ls /usr/lib/tvwcs/tvwcs/__pycache__ | head -3
           PYTHONPATH=/usr/lib/tvwcs python3 -c 'from tvwcs import distro, control_updates as u, features as f, selfupdate as s; assert distro.family()=="fedora"; assert u.detect().id=="dnf"; assert s.other_package()=="fedora" and not s.builds_itself(); assert s.installed_packages()==["tvwcs"], s.installed_packages(); print(f.packages_for(f.BY_KEY["bluetooth"]), distro.package_states(["bluez","tvwcs"]))'
           PYTHONPATH=/usr/lib/tvwcs python3 -c 'import gi; gi.require_version("Gtk","4.0"); from tvwcs import ui_control_pages'
@@ -119,6 +120,7 @@ jobs:
         run: |
           tvwcs help
           cat /usr/lib/tvwcs/PACKAGE
+          tvwcs vendor | grep -q "GitHub releases of grahamrkf/tvwcs"
           PYTHONPATH=/usr/lib/tvwcs python3 -c 'from tvwcs import distro, control_updates as u, features as f, selfupdate as s; assert distro.family()=="arch"; assert u.detect().id=="pacman"; assert s.other_package()=="arch"; print(f.packages_for(f.BY_KEY["bluetooth"]))'
           PYTHONPATH=/usr/lib/tvwcs python3 -c 'from tvwcs import control_updates as u; s=u.read_state(); print(s.manager.id, s.total, s.problems)'
           PYTHONPATH=/usr/lib/tvwcs python3 -c 'import gi; gi.require_version("Gtk","4.0"); from tvwcs import ui_control_pages'

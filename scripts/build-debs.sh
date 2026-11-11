@@ -29,6 +29,9 @@ install -d "$P/usr/lib/tvwcs/tvwcs/retro/icons/hicolor/scalable/actions"   # the
 install -m 644 "$ROOT"/package/tvwcs/retro/*.ttf "$ROOT"/package/tvwcs/retro/*.png "$P/usr/lib/tvwcs/tvwcs/retro/"
 install -m 644 "$ROOT"/package/tvwcs/retro/icons/hicolor/scalable/actions/*.svg "$P/usr/lib/tvwcs/tvwcs/retro/icons/hicolor/scalable/actions/"
 install -m 644 "$ROOT/VERSION" "$P/usr/lib/tvwcs/VERSION"
+# TVWCS's own updates from its GitHub releases (vendor.py). A vendor building its own package leaves it out with
+# TVWCS_NO_UPDATER=1, so its repository delivers TVWCS (or ships a vendor.json, which wins anyway)
+[ -n "${TVWCS_NO_UPDATER:-}" ] || install -m 644 "$ROOT/packaging/common/updates.json" "$P/usr/lib/tvwcs/updates.json"
 install -m 755 "$ROOT/package/bin/tvwcs" "$P/usr/bin/tvwcs"
 install -m 755 "$ROOT/data/tvwcs-session" "$P/usr/bin/tvwcs-session"
 install -m 644 "$ROOT/data/tvwcs.conf" "$P/usr/share/tvwcs/tvwcs.conf"

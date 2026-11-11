@@ -126,6 +126,12 @@ def session_type(env=None):
     session=env.get("XDG_SESSION_TYPE","")
     return {"x11":"X11","wayland":"Wayland"}.get(session.lower(),session)
 
+def _vendor_rows():
+    """The vendor's name and support page from its vendor.json (vendor.py), when there is one."""
+    from tvwcs import vendor
+    v=vendor.load(report=False)
+    return [("System",v.name),("Support",v.support_url)]
+
 def read_sections():
     """[(section title, [(label, value)])], every value already formatted. Empty values are left out."""
     total,free=parse_meminfo(_read("/proc/meminfo"))
@@ -155,6 +161,6 @@ def read_sections():
                      *[("Graphics" if i==0 else "",g) for i,g in enumerate(gpus)],
                      ("Battery",battery())]),
         ("DRIVES",disks),
-        ("SOFTWARE",[("TVWCS",__version__),("Python",platform.python_version()),("GTK",gtk_version())]),
+        ("SOFTWARE",[*_vendor_rows(),("TVWCS",__version__),("Python",platform.python_version()),("GTK",gtk_version())]),
     ]
     return [(title,[(k,v) for k,v in rows if v]) for title,rows in sections if any(v for _k,v in rows)]

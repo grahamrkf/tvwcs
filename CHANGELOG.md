@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- **Vendor files for systems that ship TVWCS.** A distribution or a ready-made TV image can put a `/usr/share/tvwcs/vendor.json` in its own package, and an administrator can add `/etc/tvwcs/defaults.json`, to set:
+  - **where TVWCS's updates come from:** the system's own package repository (`"system"`), a fork's GitHub releases, a release list on the vendor's site, or nowhere;
+  - **the defaults users start from:** any setting (theme, hotkeys, idle times, and so on), starter channels and favorites for the vendor's apps, and the app to open at login;
+  - **a name and support page**, shown in **Settings › System information**.
+  `tvwcs vendor` shows what TVWCS read and what it skipped. See [docs/VENDORS.md](docs/VENDORS.md).
+- **TVWCS's own updater now comes from its package.** By default TVWCS assumes a distribution packaged it and updates it with the rest of the system, so Settings shows no GitHub check. The .deb, .rpm and Arch package attached to TVWCS's GitHub releases now include `/usr/lib/tvwcs/updates.json`, which turns the GitHub check back on, so nothing changes for anyone who installed TVWCS from GitHub. A vendor's file wins over it. When you build the packages yourself, `TVWCS_NO_UPDATER=1` leaves it out.
+- **Only changed settings are saved.** `config.json` now keeps only the settings that differ from the defaults (and from a vendor's presets), so a setting you never touched follows the defaults when they change. Settings already saved keep their values.
 - **TVWCS says when an update needs a restart.** Debian keeps the running kernel installed beside a new one and (without reboot-notifier) leaves no marker, so after a kernel update Settings never asked for a restart. Settings now also notices an installed kernel newer than the running one, of the same kind. When an update finishes and a restart is needed, it offers to restart straight away, and the Quick Menu's updates icon turns into a restart icon (**Restart to finish updating**) until you do.
 - **A session that ends by itself leaves a trace.** Login screens such as greetd drop everything sway prints, so when sway quit back to the login screen nothing said why. TVWCS's session now sends sway's messages (and the launcher's and apps', which share them) to the journal: `journalctl -b -t sway`. At a text console they still show on screen.
 
