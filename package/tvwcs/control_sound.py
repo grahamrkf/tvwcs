@@ -209,7 +209,24 @@ def volume_key(step, boost=False):
     if not current.ok: return current
     volume=parse_volume(current.out,"")[0]
     if volume is None: return current
-    return run(["pactl","set-sink-volume","@DEFAULT_SINK@",f"{stepped(volume,step,boost)}%"],timeout=3)
+    target=stepped(volume,step,boost)
+    done=run(["pactl","set-sink-volume","@DEFAULT_SINK@",f"{target}%"],timeout=3)
+    if done.ok: _indicate(target)
+    return done
+
+def mute_key():
+    """The mute key (`tvwcs volume mute`): the output in use muted, or heard again."""
+    done=run(["pactl","set-sink-mute","@DEFAULT_SINK@","toggle"],timeout=3)
+    if done.ok: _indicate(None)
+    return done
+
+def _indicate(volume):
+    """Show the volume indicator (osd.py) with the output's level now (`volume`, when it is known already)."""
+    from tvwcs import osd
+    from tvwcs.quick_status import parse_volume
+    if not osd.can_show(): return
+    if volume is None: volume=parse_volume(run(["pactl","get-sink-volume","@DEFAULT_SINK@"],timeout=3).out,"")[0]
+    osd.show(volume,parse_volume("",run(["pactl","get-sink-mute","@DEFAULT_SINK@"],timeout=3).out)[1])
 
 def loud_outputs(text, most):
     """`pactl list sinks` (C locale) -> the names of the outputs with a channel above `most` %."""
@@ -272,9 +289,10 @@ class VolumeGuard:
             self.stopping.wait(self.RETRY)
 
 def main(args):
-    """`tvwcs volume up|down` (no GTK, so a held key keeps up)."""
-    if len(args)!=2 or args[0]!="volume" or args[1] not in ("up","down"):
-        print("Usage: tvwcs volume up|down",file=sys.stderr); return 2
+    """`tvwcs volume up|down|mute` (no GTK, so a held key keeps up; the indicator is a process of its own)."""
+    if len(args)!=2 or args[0]!="volume" or args[1] not in ("up","down","mute"):
+        print("Usage: tvwcs volume up|down|mute",file=sys.stderr); return 2
+    if args[1]=="mute": return 0 if mute_key().ok else 1
     from tvwcs.model import ConfigStore
     return 0 if volume_key(1 if args[1]=="up" else -1,bool(ConfigStore().settings["audio_boost"])).ok else 1
 

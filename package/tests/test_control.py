@@ -136,16 +136,36 @@ class SoundTests(unittest.TestCase):
             def fake_run(cmd, timeout=None):
                 calls.append(cmd)
                 return Result(True,0,f"Volume: front-left: 1 / {volume}% / -3 dB,   front-right: 1 / {volume}% / -3 dB\n" if cmd[1]=="get-sink-volume" else "","")
-            with mock.patch.object(sound,"run",fake_run): sound.volume_key(step,boost)
+            shown=[]
+            with mock.patch.object(sound,"run",fake_run), mock.patch.object(sound,"_indicate",shown.append): sound.volume_key(step,boost)
+            self.assertEqual(shown,[int(calls[-1][-1][:-1])])   # the indicator shows the volume just set
             return calls[-1][-1] if calls[-1][1]=="set-sink-volume" else None
         self.assertEqual([press(95,1),press(100,1),press(100,1,boost=True),press(150,1,boost=True),press(100,-1)],["100%","100%","105%","150%","95%"])
         self.assertEqual([press(120,1),press(170,1,boost=True)],["100%","150%"])   # set louder elsewhere: back to the top
         self.assertEqual(sound.main(["volume","sideways"]),2)
+    def test_the_mute_key_toggles_and_shows_the_indicator(self):
+        calls=[]; shown=[]
+        def fake_run(cmd, timeout=None): calls.append(cmd); return Result(True,0,"","")
+        with mock.patch.object(sound,"run",fake_run), mock.patch.object(sound,"_indicate",shown.append):
+            self.assertEqual(sound.main(["volume","mute"]),0)
+        self.assertEqual(calls,[["pactl","set-sink-mute","@DEFAULT_SINK@","toggle"]]); self.assertEqual(shown,[None])
+    def test_the_indicator_reads_the_level_when_it_is_not_known(self):
+        def fake_run(cmd, timeout=None):
+            return Result(True,0,"Volume: front-left: 1 / 35% / -3 dB\n" if cmd[1]=="get-sink-volume" else "Mute: yes\n","")
+        with mock.patch.object(sound,"run",fake_run), mock.patch("tvwcs.osd.can_show",return_value=True), \
+             mock.patch("tvwcs.osd.show") as show:
+            sound._indicate(None)
+        show.assert_called_once_with(35,True)
+        with mock.patch("tvwcs.osd.can_show",return_value=False), mock.patch.object(sound,"run") as run, mock.patch("tvwcs.osd.show") as show:
+            sound._indicate(40)   # no graphical session (over SSH): pactl is not even asked
+        run.assert_not_called(); show.assert_not_called()
     def test_tvwcs_conf_binds_the_volume_keys(self):
         conf=(Path(__file__).resolve().parents[2]/"data"/"tvwcs.conf").read_text().splitlines()
         for flag in ("--locked ",""):
             for key,word in (("Raise","up"),("Lower","down")):
                 self.assertIn(f"bindsym {flag}--no-warn XF86Audio{key}Volume exec /usr/bin/tvwcs volume {word}",conf)
+            self.assertIn(f"bindsym {flag}--no-warn XF86AudioMute exec /usr/bin/tvwcs volume mute",conf)
+        self.assertIn('no_focus [app_id="^com\\.tvwcs\\.Osd$"]',conf)   # the indicator's fallback window never takes the keys
     def test_loud_outputs_are_brought_down_to_the_top(self):
         listing=("Sink #1\n\tName: hdmi\n\tVolume: front-left: 1 / 100% / 0 dB,   front-right: 1 / 155% / 11 dB\n\t        balance 0.00\n"
                  "\tBase Volume: 65536 / 100% / 0.00 dB\n\tProperties:\n\t\tdevice.description = \"Volume: 900%\"\n"

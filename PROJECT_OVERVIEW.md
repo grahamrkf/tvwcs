@@ -23,7 +23,7 @@ The look follows Metro (Modern UI): flat and typographic. The Retro theme swaps 
 
 ## How it works
 
-**The window.** TVWCS is one borderless floating sway window (plain GTK 4 through python3-gi, no libadwaita or layer-shell), placed over IPC in the usable area of the focused monitor. It holds the Quick Menu and, beside it, Applications. TVWCS computes the exact position at run time from the Quick Menu corner and the screen edge margin (which also handles overscan). `tvwcs.conf` maps it with opacity 0 until it is placed, so it never flashes in the centre. TVWCS recognises its own windows by the exact title `TVWCS` or the prefix `TVWCS · `.
+**The window.** TVWCS is one borderless floating sway window (plain GTK 4 through python3-gi, no libadwaita or layer-shell; only the volume indicator, `osd.py`, is a gtk4-layer-shell overlay so it shows over full-screen apps), placed over IPC in the usable area of the focused monitor. It holds the Quick Menu and, beside it, Applications. TVWCS computes the exact position at run time from the Quick Menu corner and the screen edge margin (which also handles overscan). `tvwcs.conf` maps it with opacity 0 until it is placed, so it never flashes in the centre. TVWCS recognises its own windows by the exact title `TVWCS` or the prefix `TVWCS · `.
 
 **TV mode and desktop mode.** TV mode is the TVWCS session (`tvwcs-session` exports `TVWCS_SESSION`); any other sway session with the `include /usr/share/tvwcs/tvwcs.conf` line is desktop mode. TV mode adds what a TV needs: no swaybar (`tvwcs-session` writes its sway config with the bar commented out), the pointer hidden (`seat * hide_cursor`, `cursor.py`), the Quick Menu kept open while no app is, and the TVWCS lock screen.
 
