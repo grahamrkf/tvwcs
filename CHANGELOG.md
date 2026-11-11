@@ -3,9 +3,6 @@
 ## Unreleased
 
 - **A session that ends by itself leaves a trace.** Login screens such as greetd drop everything sway prints, so when sway quit back to the login screen nothing said why. TVWCS's session now sends sway's messages (and the launcher's and apps', which share them) to the journal: `journalctl -b -t sway`. At a text console they still show on screen.
-
-## 5.21.0 — 2026-11-11
-
 - **A Settings button in the Quick Menu.** ⚙ now sits beside ⊞ Applications, next to the clock, and opens the Settings app (channel 0) in one click, without typing the channel number or going through a status icon's panel.
 
 ## 5.20.1 — 2026-11-11
