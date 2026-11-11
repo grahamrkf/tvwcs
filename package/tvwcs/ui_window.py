@@ -246,14 +246,15 @@ class TVWCSWindow(Gtk.ApplicationWindow):
                "bluetooth":quick_status.bluetooth_icon(status),"updates":quick_status.updates_icon(status),
                "battery":quick_status.battery_icon(status)}
         shown={"network":True,"volume":status.volume is not None,
-               "bluetooth":bool(status.bluetooth),"updates":status.updates>0,
+               "bluetooth":bool(status.bluetooth),"updates":quick_status.updates_shown(status),
                "battery":status.battery is not None}
         for key,(icon,fallback,tip) in looks.items():
             b=buttons[key]
             if key in ("updates","battery"):   # an icon and a number: how many updates, the battery's percent
                 child=Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL,spacing=S(4)); child.set_halign(Gtk.Align.CENTER)
                 child.append(glyph(icon,fallback,22))
-                n=Gtk.Label(label=str(status.updates) if key=="updates" else f"{status.battery or 0}%"); n.add_css_class("status-count"); child.append(n)
+                n=Gtk.Label(label=str(status.updates) if key=="updates" else f"{status.battery or 0}%"); n.add_css_class("status-count")
+                if key!="updates" or status.updates: child.append(n)   # a restart alone: just its icon
                 b.add_css_class("status-wide")
             else: child=glyph(icon,fallback,22)
             if key=="bluetooth": (b.add_css_class if status.bluetooth=="off" else b.remove_css_class)("status-off")

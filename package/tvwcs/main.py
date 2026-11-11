@@ -105,7 +105,7 @@ class StatusWatcher:
     BAR_EVERY=4       # seconds between checks that the bar is still hidden (a sway reload shows it again)
     UPDATES_EVERY=3*3600   # seconds between update checks (the package lists, Flathub)
     def __init__(self, app):
-        self.app=app; self.source=0; self.reading=False; self.last_read=0.0; self.last_bar=0.0; self.updates=0
+        self.app=app; self.source=0; self.reading=False; self.last_read=0.0; self.last_bar=0.0; self.updates=0; self.reboot=False
         self.updates_due=time.monotonic()+90; self.checking_updates=False; self.bar_hidden=False; self.kept_open=False; self.had_windows=False
     def start(self):
         if not self.source: self.source=GLib.timeout_add_seconds(self.TICK,self._tick)
@@ -141,9 +141,9 @@ class StatusWatcher:
         return GLib.SOURCE_CONTINUE
     def read_now(self):
         if self.reading: return
-        self.reading=True; self.last_read=time.monotonic(); updates=self.updates
+        self.reading=True; self.last_read=time.monotonic(); updates=self.updates; reboot=self.reboot
         def work():
-            try: status=quick_status.read(updates)
+            try: status=quick_status.read(updates,reboot)
             except Exception: status=None   # a status icon must never break the menu
             GLib.idle_add(lambda:(self._got(status),GLib.SOURCE_REMOVE)[1])
         threading.Thread(target=work,daemon=True).start()
@@ -155,11 +155,11 @@ class StatusWatcher:
     def _check_updates(self):
         self.checking_updates=True
         def work():
-            n=quick_status.count_updates()
-            GLib.idle_add(lambda:(self._got_updates(n),GLib.SOURCE_REMOVE)[1])
+            n,reboot=quick_status.check_updates()
+            GLib.idle_add(lambda:(self._got_updates(n,reboot),GLib.SOURCE_REMOVE)[1])
         threading.Thread(target=work,daemon=True).start()
-    def _got_updates(self, n):
-        self.checking_updates=False; self.updates=n; self.updates_due=time.monotonic()+self.UPDATES_EVERY; self.read_now()
+    def _got_updates(self, n, reboot=False):
+        self.checking_updates=False; self.updates=n; self.reboot=reboot; self.updates_due=time.monotonic()+self.UPDATES_EVERY; self.read_now()
     def updates_changed(self):
         """Updates were installed or checked in Settings: count them again soon."""
         self.updates_due=min(self.updates_due,time.monotonic()+5)
