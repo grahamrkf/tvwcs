@@ -50,8 +50,12 @@ class LockScreenTests(unittest.TestCase):
             p=theme.PALETTES[name]; self.assertEqual((p["PANE"],p["FG"],p["MUTED"]),(bg,fg,muted))
         for name,(bg,fg,muted,line) in lockscreen.RETRO.items():
             p=theme.RETRO_PALETTES[name]; self.assertEqual((p["BG"],p["FG"],p["MUTED"],p["LINE"]),(bg,fg,muted,line))
-        from tvwcs.model import RETRO_WALLPAPERS
+        for name,(bg,fg,muted,accent,_font,ring) in lockscreen.MEDIA.items():
+            p=theme.MEDIA_PALETTES[name]; self.assertEqual((p["PANE"],p["FG"],p["MUTED"],p["ACCENT"]),(bg,fg,muted,accent))
+            self.assertTrue(p["FONT"].startswith(f'"{ring}"'))
+        from tvwcs.model import MEDIA_LOOKS, RETRO_WALLPAPERS
         self.assertEqual(lockscreen.RETRO_BACKGROUNDS,RETRO_WALLPAPERS)
+        self.assertEqual(set(lockscreen.MEDIA),set(MEDIA_LOOKS)); self.assertEqual(set(theme.MEDIA_PALETTES),set(MEDIA_LOOKS))
     def test_lock_at_start_only_when_on_in_tv_mode_with_a_password(self):
         tv={"TVWCS_SESSION":"sway"}; on={"lock_at_start":True}; sw=which_of("swaylock")
         self.assertEqual(lockscreen.lock_at_start(on,tv,sw,"P"),"")

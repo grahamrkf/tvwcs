@@ -3,7 +3,7 @@ session's own locker is left alone. Unlocking is as with any swaylock: type the 
 
 Each screen gets a picture made for its size (an SVG, which swaylock loads through gdk-pixbuf and librsvg): a padlock,
 "Locked" and how to unlock, in the Modern theme's light or dark colours with the accent, or in the Retro theme's
-phosphor and pixel fonts on its background. swaylock's ring stays on screen below the text, so it is clear where the
+phosphor and pixel fonts on its background, or in the Media theme's colours for its look. swaylock's ring stays on screen below the text, so it is clear where the
 password goes. The Retro fonts reach swaylock through a fontconfig file of its own (they are not installed for the
 whole system). No GTK dependency, so it locks quickly.
 
@@ -23,6 +23,10 @@ from tvwcs.retro import FONT_FILES, STATIC_PICTURE
 MODERN={"dark":("#1b1b1b","#ffffff","#b5b5b5"),"light":("#f2f2f2","#000000","#4a4a4a")}
 RETRO={"green":("#020a04","#39ff6a","#1fa845","#0f5c24"),"amber":("#0a0600","#ffb000","#b57a00","#5c3f00"),
        "white":("#05060a","#e8eef8","#97a0ae","#3a404a")}
+# The Media theme's looks: PANE, FG, MUTED and ACCENT, and the font (theme.MEDIA_PALETTES)
+MEDIA={"jellyfin":("#181824","#ffffff","#b1b1c8","#8e5ad8","'Noto Sans', 'Open Sans', sans-serif","Noto Sans"),
+       "emby":("#191919","#ffffff","#b8b8b8","#4caf50","Roboto, 'Noto Sans', 'Open Sans', sans-serif","Roboto"),
+       "plex":("#1f2124","#eeeeee","#b4b6b9","#e8a90f","'Open Sans', 'Noto Sans', sans-serif","Open Sans")}
 RETRO_BACKGROUNDS={"gray":"#808080","blue":"#0000ff","static":"static"}   # model.RETRO_WALLPAPERS
 MODERN_FONT="'Segoe UI', Selawik, 'Open Sans', 'Noto Sans', Cantarell, sans-serif"
 RING_RADIUS=70     # swaylock's ring, in its own (logical) pixels; the text sits above it
@@ -50,6 +54,9 @@ def look_of(settings) -> Look:
         bg,fg,muted,line=RETRO.get(settings.get("phosphor"),RETRO["green"])
         return Look(True,RETRO_BACKGROUNDS.get(settings.get("retro_wallpaper"),"#808080"),bg,fg,muted,fg,line,
                     "'TVWCS Pixel 8x8', monospace","TVWCS Pixel 5x7")
+    if settings.get("style")=="media":
+        bg,fg,muted,accent,font,ring=MEDIA.get(settings.get("media_look"),MEDIA["jellyfin"])
+        return Look(False,bg,bg,fg,muted,accent,muted,font,ring)
     bg,fg,muted=MODERN["light" if settings.get("theme")=="light" else "dark"]
     return Look(False,bg,bg,fg,muted,_hex(settings.get("accent"),"#0078d7").lower(),muted,MODERN_FONT,"Open Sans")
 

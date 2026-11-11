@@ -197,9 +197,9 @@ class ControlWindow(Gtk.ApplicationWindow):
     def _load_css(self):
         retro=self.app.style=="retro"; use_retro(retro,self.app.retro_font)
         self._provider.load_from_data(render_css(self.app.accent,self.app.scale,CONTROL_CSS,theme=self.app.theme,style=self.app.style,
-                                                 phosphor=self.app.phosphor,retro_font=self.app.retro_font).encode("utf-8"))
+                                                 phosphor=self.app.phosphor,retro_font=self.app.retro_font,media=self.app.media).encode("utf-8"))
         gtk_settings=Gtk.Settings.get_default()
-        if gtk_settings is not None: gtk_settings.set_property("gtk-application-prefer-dark-theme",retro or self.app.theme!="light")
+        if gtk_settings is not None: gtk_settings.set_property("gtk-application-prefer-dark-theme",self.app.style!="modern" or self.app.theme!="light")
 
     def settings_changed(self, settings):
         """Options saved a change: draw this window with its accent, size, key names and motion too."""
@@ -209,6 +209,7 @@ class ControlWindow(Gtk.ApplicationWindow):
         app.accent=settings.get("accent",app.accent)
         app.theme=settings.get("theme","dark"); app.keyboard=settings.get("keyboard","hidden")
         app.style=settings.get("style","modern"); app.phosphor=settings.get("phosphor","green"); app.retro_font=settings.get("retro_font","pixel")
+        app.media=settings.get("media_look","jellyfin")
         if resized and self._running():   # rebuilding would lose the run's output: the new size waits for the next time
             self._load_css(); self._apply_settings()
             self.notice("Interface size","TVWCS uses the new size now. Settings uses it the next time it opens, once what is running here has finished."); return
@@ -700,6 +701,7 @@ class ControlPanelApp(Gtk.Application):
         self.theme=settings.get("theme","dark"); self.keyboard=settings.get("keyboard","hidden")
         self.style=settings.get("style","modern"); self.phosphor=settings.get("phosphor","green"); self.retro_font=settings.get("retro_font","pixel")
         self.wm=WindowManager(); self.back_to=None   # the app to go back to when Settings closes (return_focus.py)
+        self.media=settings.get("media_look","jellyfin")
     def note_return(self):
         """Settings is being opened or brought up: what to go back to is what TVWCS noted, else (a shell, the user's own
         key binding) the window sway has focused now. Brought up again from Settings itself, it stays as it was."""

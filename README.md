@@ -137,7 +137,7 @@ Open **TVWCS Settings** with channel 00, from a status panel's settings button, 
 
 | Page (`tvwcs settings …`) | What it does |
 |---|---|
-| **Appearance** (`appearance`) | Interface size 1 to 5 (Auto is 4 in TV mode and 3 otherwise; a 4K switch doubles it), the theme: Modern (dark or light with an accent and a background colour, passed on to apps) or Retro (an old CRT TV's menus in green, amber or white, in a choice of fonts and backgrounds), the Quick Menu corner, the search bar or a search icon, channel digits, closing TVWCS when it loses focus, and the screen edge margin for TVs that cut off the edges (overscan). |
+| **Appearance** (`appearance`) | Interface size 1 to 5 (Auto is 4 in TV mode and 3 otherwise; a 4K switch doubles it), the theme: Modern (dark or light with an accent and a background colour, passed on to apps) Retro (an old CRT TV's menus in green, amber or white, in a choice of fonts and backgrounds) or Media (dark and rounded, in colours that go with Jellyfin, Emby or Plex), the Quick Menu corner, the search bar or a search icon, channel digits, closing TVWCS when it loses focus, and the screen edge margin for TVs that cut off the edges (overscan). |
 | **User** (`user`) | Your name and password, server mode, logging in automatically into TVWCS, locking when TVWCS starts, the login screen in use, and the app to open at login. |
 | **Remote and hotkeys** (`hotkeys`) | **Add TVWCS to sway** (in a sway session without it), the Quick Menu key for keyboard, remote and gamepad, the apps with hotkeys of their own, and **Reset all hotkeys**. |
 | **Sound** (`sound`) | Volume and mute for each output and input (the inactive ones folded away), and **Allow over-amplification** up to 150 %. |
