@@ -223,12 +223,15 @@ class TVWCSWindow(Gtk.ApplicationWindow):
         self.clock_time=Gtk.Label(); self.clock_time.add_css_class("clock-time"); self.clock_time.set_valign(Gtk.Align.BASELINE); text.append(self.clock_time)
         self.clock_date=Gtk.Label(); self.clock_date.add_css_class("clock-date"); self.clock_date.set_valign(Gtk.Align.BASELINE); text.append(self.clock_date)
         clock.set_child(text); clock.connect("clicked",lambda *_:self.app.open_settings("datetime")); line.append(clock)
+        # ⚙ beside ⊞: the Settings app (channel 0), one click from anywhere
+        gear=Gtk.Button(); gear.set_child(glyph("emblem-system-symbolic","⚙",22)); gear.add_css_class("square"); gear.add_css_class("status-icon"); gear.set_valign(Gtk.Align.CENTER)
+        gear.set_tooltip_text("Settings"); gear.connect("clicked",lambda *_:self.app.open_settings()); line.append(gear); self.settings_button=gear
         guide=Gtk.Button(); guide.set_child(glyph("view-grid-symbolic","⊞",22)); guide.add_css_class("square"); guide.add_css_class("status-icon"); guide.set_valign(Gtk.Align.CENTER)
         # ⊞ is on screen when it is clicked: open or close Applications here and now (show_mode would first ask the
         # window manager where TVWCS is, and an answer from before the click showed it again instead of closing it)
         guide.connect("clicked",lambda *_:self.app.show_panels(not self.guide_open,False,focus="guide" if not self.guide_open else "quick"))
         line.append(guide); self.guide_button=guide
-        self._status_group=NavGroup(([self.search_button] if self.search_button else [])+list(self._status_buttons.values())); self._clock_group=NavGroup([clock,guide])
+        self._status_group=NavGroup(([self.search_button] if self.search_button else [])+list(self._status_buttons.values())); self._clock_group=NavGroup([clock,gear,guide])
         pointer_only(*self._status_group,*self._clock_group)
         self._status_shown=None; self.tick_clock(); self.show_status(self.app.status)
         self._flip(bar)   # the clock's row is nearest the corner
