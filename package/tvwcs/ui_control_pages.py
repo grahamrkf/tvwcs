@@ -13,7 +13,7 @@ from tvwcs import control_bluetooth as bluetooth, control_datetime as timedate, 
 from tvwcs import __version__, distro, features, power, privilege, selfupdate, servermode, sway_include
 from tvwcs import ui_control_login as login_ui
 from tvwcs.hotkeys import ACTION_LABELS, DEFAULT_HOTKEYS, DEVICE_ACTIONS, DEVICE_LABELS, DEVICES, describe
-from tvwcs.model import (AUTO_SIZE, CHANNEL_DIGITS, CORNERS, PHOSPHORS, RETRO_FONTS, RETRO_WALLPAPER_LABELS, RETRO_WALLPAPERS, SIZES, STYLES, THEMES, WALLPAPERS, ConfigStore, accent_name, auto_size, channel_range, corner_right, is_4k,
+from tvwcs.model import (AUTO_SIZE, CHANNEL_DIGITS, CORNERS, MEDIA_LOOKS, PHOSPHORS, RETRO_FONTS, RETRO_WALLPAPER_LABELS, RETRO_WALLPAPERS, SIZES, STYLES, THEMES, WALLPAPERS, ConfigStore, accent_name, auto_size, channel_range, corner_right, is_4k,
                          size_label, tv_mode)
 from tvwcs.session import runtime_dir
 from tvwcs.system_actions import command_for
@@ -266,6 +266,11 @@ class AppearancePage(_ConfigPage):
                       "Inter is a smooth font made to be easy to read.")
             self.row("Background",RETRO_WALLPAPER_LABELS[st["retro_wallpaper"]],self.choose_retro_wallpaper,ident="opt:retro_wallpaper",
                      swatch=st["retro_wallpaper"])
+        elif st["style"]=="media":
+            self.note("Dark with rounded corners, like a media server app. Applications that follow the desktop's colour scheme are dark.")
+            self.row("Look",MEDIA_LOOKS[st["media_look"]],self.choose_media_look,ident="opt:media_look")
+            self.note("Colours that go with the app you watch on: Jellyfin's purple and blue, Emby's green or Plex's gold. "
+                      "Each look has its own background.")
         else:
             self.note("TVWCS's flat look, in the accent colour.")
             self.row("Light or dark",THEMES[st["theme"]],self.choose_theme,ident="opt:theme")
@@ -324,6 +329,8 @@ class AppearancePage(_ConfigPage):
         self.win.choose_option("Theme",list(STYLES.items()),self.state.settings["style"],lambda t:self.change(lambda s:s.settings.update(style=t)))
     def choose_phosphor(self):
         self.win.choose_option("Colour",list(PHOSPHORS.items()),self.state.settings["phosphor"],lambda c:self.change(lambda s:s.settings.update(phosphor=c)))
+    def choose_media_look(self):
+        self.win.choose_option("Look",list(MEDIA_LOOKS.items()),self.state.settings["media_look"],lambda k:self.change(lambda s:s.settings.update(media_look=k)))
     def choose_retro_font(self):
         self.win.choose_option("Font",list(RETRO_FONTS.items()),self.state.settings["retro_font"],lambda f:self.change(lambda s:s.settings.update(retro_font=f)))
     def choose_retro_wallpaper(self):

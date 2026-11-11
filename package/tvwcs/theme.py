@@ -1,7 +1,9 @@
-"""TVWCS's two themes. Modern is the Metro / Modern UI look: flat, square, high-contrast; every corner radius is 0.
+"""TVWCS's three themes. Modern is the Metro / Modern UI look: flat, square, high-contrast; every corner radius is 0.
 Retro is an old CRT television's menus: green, amber or white pixel text on black, buttons without borders until
 the mouse is over one (dashed) or one is selected (solid), the TVWCS Pixel fonts (5 x 7 for small text, the thinner
-8 x 16 for the text of lists and buttons, 8 x 8 for large) at whole multiples of their pixels, and pixel icons (widgets.glyph)."""
+8 x 16 for the text of lists and buttons, 8 x 8 for large) at whole multiples of their pixels, and pixel icons (widgets.glyph).
+Media is a dark, rounded look like a media server app's, in colours that go with Jellyfin, Emby or Plex (MEDIA_PALETTES):
+TVWCS's own colours and shapes, nothing taken from those apps' logos or artwork."""
 from __future__ import annotations
 import re
 from tvwcs.model import METRO_COLORS, RETRO_WALLPAPERS, WALLPAPERS
@@ -201,17 +203,82 @@ def snap_font_size(px, scale=1.0):
     if px>=TEXT_FROM: return max(TEXT_GRID,int(scaled//TEXT_GRID)*TEXT_GRID)
     return max(2*PIXEL_GRID if scaled>=12 else PIXEL_GRID,int(scaled//PIXEL_GRID)*PIXEL_GRID)
 
-def render_css(accent, scale=1.0, extra="", theme="dark", style="modern", phosphor="green", retro_font="pixel"):
+# The Media theme's looks (Settings > Appearance > Look, model.MEDIA_LOOKS): Modern's dark colours tinted to match, the
+# accent the app's colour, FILL what a selection is filled with (Jellyfin's a purple to blue gradient), ON the text on
+# it (dark on Plex's gold), RADIUS the corners of buttons and fields and CARD_RADIUS those of dialogs and panels.
+# BG and FG are repeated in lockscreen.MEDIA (a test keeps them the same).
+MEDIA_PALETTES={
+    "jellyfin":{"BG":"#101018","FG":"#ffffff","PANE":"#181824","RAISED":"#232333","HOVER":"#30304a","HEADER":"#1d1d2b","CARD":"#1f1f2e",
+                "STATUS":"#13131c","MUTED":"#b1b1c8","FAINT":"#7a7a94","BORDER":"#4b4b66","LINE":"#2c2c40","SCRIM":"rgba(6, 6, 12, 0.8)",
+                "ERROR":"#ff6b78","ON":"#6fd3a8","TROUGH":"#35354d","ACCENT":"#8e5ad8","ONACCENT":"#ffffff","ONMUTED":"#ece4fa",
+                "FILL":"linear-gradient(100deg, #9b5de5, #2a9fe0)","RADIUS":"6px","CARD_RADIUS":"12px",
+                "FONT":'"Noto Sans", "Open Sans", "Cantarell", sans-serif'},
+    "emby":{"BG":"#0f0f0f","FG":"#ffffff","PANE":"#191919","RAISED":"#262626","HOVER":"#333333","HEADER":"#1f1f1f","CARD":"#202020",
+            "STATUS":"#141414","MUTED":"#b8b8b8","FAINT":"#7e7e7e","BORDER":"#555555","LINE":"#2e2e2e","SCRIM":"rgba(0, 0, 0, 0.8)",
+            "ERROR":"#ff5a67","ON":"#5cc254","TROUGH":"#383838","ACCENT":"#4caf50","ONACCENT":"#ffffff","ONMUTED":"#e4f5e3",
+            "FILL":"#43a047","RADIUS":"4px","CARD_RADIUS":"8px",
+            "FONT":'"Roboto", "Noto Sans", "Open Sans", sans-serif'},
+    "plex":{"BG":"#16181a","FG":"#eeeeee","PANE":"#1f2124","RAISED":"#2b2e32","HOVER":"#383c41","HEADER":"#25282b","CARD":"#26292d",
+            "STATUS":"#1a1c1e","MUTED":"#b4b6b9","FAINT":"#7c8085","BORDER":"#56595e","LINE":"#323539","SCRIM":"rgba(8, 9, 10, 0.82)",
+            "ERROR":"#ff6b6b","ON":"#e8a90f","TROUGH":"#3a3d42","ACCENT":"#e8a90f","ONACCENT":"#1a1a1a","ONMUTED":"#3d3000",
+            "FILL":"#e8a90f","RADIUS":"18px","CARD_RADIUS":"10px",
+            "FONT":'"Open Sans", "Noto Sans", "Cantarell", sans-serif'},
+}
+
+# Drawn after the Modern rules (and the Settings app's): rounded corners, a slim ring round the selection, headings in
+# a heavier weight, and what stays white whatever is on the selection (application tiles, the red close button, badges).
+MEDIA_CSS="""
+window.tvwcs-window, .tvwcs-root { font-family: @FONT@; border-radius: 0; }
+.brand { font-weight: 700; letter-spacing: 0; }
+.pane-title { font-weight: 600; }
+button.category-header { font-weight: 600; }
+.section-title { letter-spacing: 1px; }
+.clock-time { font-weight: 500; }
+button.tab-button label { font-weight: 500; }
+button:focus, button:focus-visible, button:active, .tvwcs-selected, button.category-header:focus, button.category-header:focus-visible,
+button.clock-button:focus, button.clock-button:focus-visible, button.status-icon:focus, button.status-icon:focus-visible,
+button.close-button:focus, button.close-button:focus-visible, button.close-button:active
+  { outline: 2px solid alpha(#ffffff, 0.85); outline-offset: -2px; }
+button.tab-button.active { box-shadow: inset 4px 0 0 @ACCENT@; }
+button.tab-button:focus, button.tab-button:focus-visible { box-shadow: none; }
+button.launch-row.open-app { box-shadow: inset 4px 0 @ACCENT@; }
+button.launch-row.open-app:focus, button.launch-row.open-app:focus-visible { box-shadow: inset 5px 0 @ONACCENT@; }
+.modal-card, popover > contents, popover contents, .status-panel { border-radius: @CARD_RADIUS@; }
+.modal-card, popover > contents, popover contents { border: 1px solid @LINE@; }
+.icon-tile, .icon-tile label { color: #ffffff; border-radius: @RADIUS@; }
+button.close-button, button.close-button label, .badge, .display-number, .display-name { color: #ffffff; }
+.badge { border-radius: 8px; }
+.digit-box { border-radius: @RADIUS@; }
+.accent-swatch { border-radius: 50%; }
+scrollbar slider { border-radius: 4px; }
+scale trough, scale highlight, .status-panel scale trough, .status-panel scale highlight { border-radius: 5px; }
+scale slider, .status-panel scale slider { border-radius: 50%; min-width: 20px; min-height: 20px; margin: -6px 0; }
+"""
+
+def media_css(css):
+    """The Modern rules made Media, before the palette is filled in: rounded corners, selections filled with FILL and
+    their text in ONACCENT (dark on Plex's gold), then MEDIA_CSS."""
+    css=css.replace("border-radius: 0;","border-radius: @RADIUS@;").replace("border-radius: 0 ","border-radius: @RADIUS@ ").replace("border-radius: 0}","border-radius: @RADIUS@}")
+    css=re.sub(r"background: @ACCENT@(?=[;}\s])","background: @FILL@",css)
+    css=css.replace("color: #ffffff","color: @ONACCENT@").replace("#e3eefa","@ONMUTED@").replace("inset 6px 0 #ffffff","inset 5px 0 @ONACCENT@")
+    return css+MEDIA_CSS
+
+def render_css(accent, scale=1.0, extra="", theme="dark", style="modern", phosphor="green", retro_font="pixel", media="jellyfin"):
     """The theme (plus `extra` rules, such as the Settings app's) with the accent colour and the look's colours filled in
     and every pixel measure multiplied by `scale`. Hover colours apply only while the mouse is in use (the window has
     the "pointer" class, see widgets.PointerWatch): a pointer hidden after a few seconds would otherwise keep marking
     whatever happens to be under it, next to the remote's real selection. The Retro theme's phosphor colour takes the
-    accent's place, and in its pixel fonts its text sizes are rounded to their grid after scaling."""
-    retro=style=="retro"
-    palette=RETRO_PALETTES.get(phosphor,RETRO_PALETTES["green"]) if retro else PALETTES.get(theme,PALETTES["dark"])
+    accent's place, and in its pixel fonts its text sizes are rounded to their grid after scaling. The Media theme's look
+    has its own accent (MEDIA_PALETTES)."""
+    retro=style=="retro"; media_look=style=="media"
+    if retro: palette=RETRO_PALETTES.get(phosphor,RETRO_PALETTES["green"])
+    elif media_look: palette=MEDIA_PALETTES.get(media,MEDIA_PALETTES["jellyfin"])
+    else: palette=PALETTES.get(theme,PALETTES["dark"])
     if retro_font not in RETRO_FAMILIES: retro_font="pixel"
-    css=retro_css(CSS+extra,retro_font) if retro else CSS+extra
-    css=css.replace("@ACCENT@",palette["FG"] if retro else accent)
+    css=retro_css(CSS+extra,retro_font) if retro else media_css(CSS+extra) if media_look else CSS+extra
+    for key in ("FILL","ONACCENT","ONMUTED","RADIUS","CARD_RADIUS","FONT"):   # these hold other tokens' names: filled in first
+        if key in palette: css=css.replace(f"@{key}@",palette[key])
+    css=css.replace("@ACCENT@",palette["FG"] if retro else palette.get("ACCENT",accent))
     for key,value in palette.items(): css=css.replace(f"@{key}@",value)
     if retro and retro_font in FONT_GROWTH:
         css=re.sub(r"font-size:\s*(\d+)px",lambda m:f"font-size: {round(int(m.group(1))*FONT_GROWTH[retro_font])}px",css)

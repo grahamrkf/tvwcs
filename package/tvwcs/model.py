@@ -94,16 +94,20 @@ DEFAULT_CORNER="bottom-left"
 def corner_right(corner) -> bool: return str(corner or "").endswith("right")
 def corner_top(corner) -> bool: return str(corner or "").startswith("top")
 # Settings > Appearance > Theme: the Modern (Metro) look or the Retro one, green, amber or white text on black like an
-# old CRT television's menus, in pixel fonts with pixel icons and no application icons.
-STYLES={"modern":"Modern","retro":"Retro"}
+# old CRT television's menus, in pixel fonts with pixel icons and no application icons; or Media, dark with rounded
+# corners in colours that go with the media server app chosen in MEDIA_LOOKS (TVWCS's own colours, not the apps' art).
+STYLES={"modern":"Modern","retro":"Retro","media":"Media"}
+MEDIA_LOOKS={"jellyfin":"Jellyfin","emby":"Emby","plex":"Plex"}
+# The Media theme's background for each look (theme.MEDIA_PALETTES has the rest of its colours)
+MEDIA_WALLPAPERS={"jellyfin":"#0b0b12","emby":"#0e0e0e","plex":"#111214"}
 PHOSPHORS={"green":"Green","amber":"Amber","white":"White"}
 # Settings > Appearance > Font (Retro): TVWCS's pixel fonts, sharp at whole pixels; VT323, after a 1970s DEC terminal's
 # font (bundled); or Inter, smooth and easy to read (the fonts-inter package, else Open Sans).
 RETRO_FONTS={"pixel":"Pixel","vt323":"VT323","readable":"Inter (easy to read)"}
 # Settings > Appearance > Light or dark (Modern): TVWCS's light or dark look; applications that follow the desktop's
-# colour scheme follow it. The Retro theme is always dark.
+# colour scheme follow it. The Retro and Media themes are always dark.
 THEMES={"dark":"Dark","light":"Light"}
-def dark_look(settings) -> bool: return settings.get("style")=="retro" or settings.get("theme")!="light"
+def dark_look(settings) -> bool: return settings.get("style") in ("retro","media") or settings.get("theme")!="light"
 # Settings > Appearance > Background colour: what shows where no application is open, and behind the Quick Menu.
 # Six greys from white to black, six bright colours and the same six darkened. Shown as swatches without names.
 WALLPAPER_GREYS=("#ffffff","#c8c8c8","#969696","#646464","#323232","#000000")
@@ -116,7 +120,9 @@ RETRO_WALLPAPERS={"gray":"#808080","blue":"#0000ff","static":"static"}
 RETRO_WALLPAPER_LABELS={"gray":"Gray","blue":"Blue","static":"TV static"}
 def wallpaper_of(settings) -> str:
     """The background to paint: a colour, or "static" for the TV static picture."""
-    return RETRO_WALLPAPERS[settings.get("retro_wallpaper","gray")] if settings.get("style")=="retro" else settings.get("wallpaper",DEFAULT_WALLPAPER)
+    if settings.get("style")=="retro": return RETRO_WALLPAPERS[settings.get("retro_wallpaper","gray")]
+    if settings.get("style")=="media": return MEDIA_WALLPAPERS.get(settings.get("media_look"),MEDIA_WALLPAPERS["jellyfin"])
+    return settings.get("wallpaper",DEFAULT_WALLPAPER)
 # The on-screen keyboard: hidden (a button shows it), the full keyboard, or a number pad. The one last used comes back.
 KEYBOARDS={"hidden":"Hidden","full":"Full keyboard","digits":"Number pad"}
 
@@ -138,7 +144,8 @@ DEFAULT_SETTINGS={
     "update_prereleases":False,     # TVWCS's updater also offers prereleases (releases not yet tested and marked latest)
     "clock_24h":False,              # the Quick Menu's clock shows 14:05 instead of 2:05 PM
     "quick_corner":DEFAULT_CORNER,  # CORNERS: where the Quick Menu sits, its layout mirrored to match
-    "style":"modern",               # STYLES: the Modern or the Retro theme
+    "style":"modern",               # STYLES: the Modern, Retro or Media theme
+    "media_look":"jellyfin",        # MEDIA_LOOKS: the media server app whose colours the Media theme goes with
     "phosphor":"green",             # PHOSPHORS: the Retro theme's colour
     "retro_font":"pixel",           # RETRO_FONTS: the Retro theme's font
     "retro_wallpaper":"gray",       # RETRO_WALLPAPERS: the Retro theme's background (Modern keeps its own in wallpaper)
@@ -198,7 +205,8 @@ def _clean_settings(raw) -> dict:
     elif scale.isdigit() and int(scale) in SIZES: s["scale"]=scale
     if isinstance(raw.get("scale_4k"),bool) and scale not in LEGACY_SCALES: s["scale_4k"]=raw["scale_4k"]
     if raw.get("theme") in THEMES: s["theme"]=raw["theme"]
-    for key,allowed in (("style",STYLES),("phosphor",PHOSPHORS),("retro_font",RETRO_FONTS),("retro_wallpaper",RETRO_WALLPAPERS)):
+    for key,allowed in (("style",STYLES),("phosphor",PHOSPHORS),("retro_font",RETRO_FONTS),("retro_wallpaper",RETRO_WALLPAPERS),
+                        ("media_look",MEDIA_LOOKS)):
         if raw.get(key) in allowed: s[key]=raw[key]
     if raw.get("quick_corner") in CORNERS: s["quick_corner"]=raw["quick_corner"]
     if isinstance(raw.get("wallpaper"),str) and raw["wallpaper"].lower() in WALLPAPERS: s["wallpaper"]=raw["wallpaper"].lower()

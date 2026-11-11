@@ -1,5 +1,13 @@
 # Changelog
 
+## 5.19.0 — 2026-11-11
+
+- **A third theme, Media.** **Settings › Appearance › Theme › Media** is a dark look with rounded corners, like a media server app, and a new **Look** row picks the app it goes with:
+  - **Jellyfin:** blue-black panels, selections filled with a purple to blue gradient, Noto Sans.
+  - **Emby:** neutral charcoal, selections in green, Roboto, slightly squarer corners.
+  - **Plex:** warm charcoal, selections in gold with dark text on them, Open Sans, rounder corners.
+  - Each look has its own background colour, and the lock screen uses the look's colours. Applications that follow the desktop's colour scheme are dark. The colours and shapes are TVWCS's own, chosen to sit well next to each app; nothing is taken from the apps' logos or artwork. The fonts are used when installed and fall back to the usual sans-serif.
+
 ## 5.18.0 — 2026-11-11
 
 - **Closing Settings goes back to the app you were using.** Open Settings over an app (from the Quick Menu, a status icon, a hotkey, or `tvwcs settings` in a terminal) and closing it with Back/Esc brings that app back, full screen again if it was, instead of leaving an empty workspace and the Quick Menu in TV mode. Opened over an empty screen, closing it shows the Quick Menu as before. TVWCS notes the app just before it opens Settings (`return_focus.py`); Settings closed from elsewhere (the Quick Menu's ⋯ menu) leaves the focus where you are.
