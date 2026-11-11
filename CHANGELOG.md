@@ -1,6 +1,6 @@
 # Changelog
 
-## 5.20.2 — 2026-11-11
+## Unreleased
 
 - **A session that ends by itself leaves a trace.** Login screens such as greetd drop everything sway prints, so when sway quit back to the login screen nothing said why. TVWCS's session now sends sway's messages (and the launcher's and apps', which share them) to the journal: `journalctl -b -t sway`. At a text console they still show on screen.
 
