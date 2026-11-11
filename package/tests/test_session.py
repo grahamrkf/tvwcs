@@ -40,13 +40,23 @@ include /etc/sway/config.d/*
 """
 class SessionConfigTests(unittest.TestCase):
     """tvwcs-session's config: made from sway's standard one, without its bar (swaybar would flash before TV mode hid it)."""
-    def run_session(self, d):
+    def run_session(self, d, systemd=False):
         d=Path(d); (d/"bin").mkdir(exist_ok=True); sway=d/"bin"/"sway"
         sway.write_text("#!/bin/sh\necho \"$@\" > \"$HOME/sway-args\"\n"); sway.chmod(0o755)
+        cat=d/"bin"/"systemd-cat"; cat.write_text("#!/bin/sh\necho \"$@\" > \"$HOME/systemd-cat-args\"\nshift 2; exec \"$@\"\n"); cat.chmod(0o755)
         (d/"standard").write_text(STANDARD)
-        env={"HOME":str(d),"PATH":f"{d/'bin'}:/usr/bin:/bin","TVWCS_SWAY_STANDARD_CONFIG":str(d/"standard")}
-        subprocess.run(["sh",str(SESSION)],env=env,check=True,stdin=subprocess.DEVNULL)
+        env={"HOME":str(d),"PATH":f"{d/'bin'}:/usr/bin:/bin","TVWCS_SWAY_STANDARD_CONFIG":str(d/"standard"),
+             "TVWCS_SYSTEMD_RUN":str(d) if systemd else str(d/"no-systemd")}
+        subprocess.run(["sh",str(SESSION)],env=env,check=True,stdin=subprocess.DEVNULL,stderr=subprocess.PIPE)
         return d/".config"/"tvwcs"/"sway-session.conf"
+    def test_sways_messages_go_to_the_journal(self):
+        with tempfile.TemporaryDirectory() as d:
+            # greetd drops a session's output, so a session that ended by itself left no trace of why
+            cfg=self.run_session(d,systemd=True)
+            self.assertEqual((Path(d)/"systemd-cat-args").read_text().split(),["-t","sway","sway","-c",str(cfg)])
+            self.assertEqual((Path(d)/"sway-args").read_text().split(),["-c",str(cfg)])
+        with tempfile.TemporaryDirectory() as d:
+            self.run_session(d); self.assertFalse((Path(d)/"systemd-cat-args").exists())   # without systemd: as before
     def test_waits_for_logind_to_make_the_session_active(self):
         with tempfile.TemporaryDirectory() as d:
             # LightDM switches to the session's console a moment after starting it; sway's libseat 0.8 checks only once
@@ -54,7 +64,7 @@ class SessionConfigTests(unittest.TestCase):
             (b/"loginctl").write_text(f"#!/bin/sh\necho x >> {n}\n[ $(wc -l < {n}) -ge 3 ] && echo yes || echo no\n")
             (b/"sway").write_text(f"#!/bin/sh\nwc -l < {n} > {s}\n")
             for f in b.iterdir(): f.chmod(0o755)
-            env={"HOME":d,"PATH":f"{b}:/usr/bin:/bin","TVWCS_SWAY_STANDARD_CONFIG":"/dev/null","XDG_SESSION_ID":"c3"}
+            env={"HOME":d,"PATH":f"{b}:/usr/bin:/bin","TVWCS_SWAY_STANDARD_CONFIG":"/dev/null","XDG_SESSION_ID":"c3","TVWCS_SYSTEMD_RUN":"/nonexistent"}
             subprocess.run(["sh",str(SESSION)],env=env,check=True,stdin=subprocess.DEVNULL)
             self.assertEqual(s.read_text().strip(),"3")
             (b/"loginctl").write_text("#!/bin/sh\nexit 1\n"); (b/"sway").write_text("#!/bin/sh\n"); t=time.monotonic()   # no such session: no wait

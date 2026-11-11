@@ -52,4 +52,10 @@ fi
 XDG_SESSION_TYPE=wayland; XDG_CURRENT_DESKTOP=sway; XDG_SESSION_DESKTOP=sway
 TVWCS_SESSION=sway; TVWCS_SESSION_CONFIG=$CFG
 export XDG_SESSION_TYPE XDG_CURRENT_DESKTOP XDG_SESSION_DESKTOP TVWCS_SESSION TVWCS_SESSION_CONFIG
+# sway's messages (and the launcher's and apps', which share them) go to the journal, so a session that ends by itself
+# leaves a trace: `journalctl -b -t sway`. Login screens such as greetd drop a session's output. Not at a text console,
+# where they show on screen as before.
+if [ ! -t 2 ] && command -v systemd-cat >/dev/null 2>&1 && [ -d "${TVWCS_SYSTEMD_RUN:-/run/systemd/system}" ]; then
+    exec systemd-cat -t sway sway -c "$CFG"
+fi
 exec sway -c "$CFG"
