@@ -13,7 +13,7 @@ from tvwcs.hotkeys import MODIFIER_KEYSYMS, render_bindings
 from tvwcs.model import CONFIG_HOME, SETTINGS_DESKTOP_ID, default_of, display_name, effective_scale, LAUNCH_NEW_WORKSPACE, LAUNCH_PLAIN, PIN_LAUNCH_AND_SHOW, ConfigStore, compute_layout, corner_top, dark_look, wallpaper_of, is_4k, scale_key, tv_mode as in_tv_mode
 from tvwcs.ownership import WindowOwners
 from tvwcs.pinlock import PinGate
-from tvwcs import appearance, control_sound, cursor, power, privilege, quick_status, sway_include, tv_mode
+from tvwcs import appearance, control_sound, cursor, power, privilege, quick_status, return_focus, sway_include, tv_mode
 from tvwcs.session import first_time_this_login, is_tvwcs_process, runtime_dir
 from tvwcs.system_actions import POWER_VERBS, SYSTEM_ACTIONS, allowed, command_for, unavailable_message
 from tvwcs.ui_editors import ProfileEditor
@@ -172,6 +172,7 @@ class TVWCSApp(Gtk.Application):
         self.layout=None; self._area=None; self._owns_pid=False
         self.pin_gate=PinGate(); self.owners=WindowOwners()
         self._fullscreen=set()   # windows that were fullscreen when TVWCS was shown; they are made fullscreen again when it hides
+        self._behind=None        # the app the Quick Menu was shown over, to go back to when Settings closes (return_focus.py)
         self.idle=IdleWatcher(self); self.cursor=CursorWatcher(self); self.volume_guard=VolumeWatcher(self)
         self.status=quick_status.Status(); self.watch=StatusWatcher(self)
         # TV mode: the start-up action may be about to open an app (it runs 1.5 s after start)
@@ -334,6 +335,8 @@ class TVWCSApp(Gtk.Application):
         guide=(mode=="guide") and not (visible and w.guide_open)
         if visible: self.show_panels(guide,False,focus="guide" if guide else "quick"); return False
         self._fullscreen=self.wm.fullscreen_windows()   # restored when TVWCS hides (see hide_window)
+        behind=next((x for x in self.wm.windows() if x.get("focused")),None) if self.wm.available else None
+        self._behind="settings" if return_focus.is_settings(behind) else return_focus.target_of(behind,fullscreen=behind is not None and int(behind["con_id"]) in self._fullscreen)   # Settings goes back to it
         self.wm.focus_output_under_mouse(); self.wm.leave_fullscreen(); self.wm.move_tvwcs_to_current_workspace(); self.refresh_data(rebuild=False)
         w.reset_scroll(); w.note_shown(); w.guide_open=guide; w.options_open=False
         self._update_layout(guide,False,focus_output=True)
@@ -513,6 +516,7 @@ class TVWCSApp(Gtk.Application):
         or "open in a new workspace" (LAUNCH_NEW_WORKSPACE), instead of the mode's usual way."""
         if profile is None: return
         if self.window is not None and profile.id in self.window.launching: return   # starting already: its button spins
+        self.note_settings_return(profile.desktop_id)
         app=self.catalogue.by_id().get(profile.desktop_id)
         # A plain profile returns to an existing window when it can; custom commands and desktop actions
         # run as written because they may stand for a separate session of the app.
@@ -558,6 +562,7 @@ class TVWCSApp(Gtk.Application):
     def launch_action(self,application,action_id,mode=None):
         profile=self.default_profile(application)
         def go():
+            self.note_settings_return(application.desktop_id)
             try:
                 info=Gio.DesktopAppInfo.new(application.desktop_id)
                 if info is None: raise RuntimeError("Desktop launcher is no longer available.")
@@ -708,6 +713,16 @@ class TVWCSApp(Gtk.Application):
         if scale_key(self.store.settings)!=old: set_scale(self.scale_factor)
         moved=self.store.settings["quick_corner"]!=corner   # placed and laid out again, like a new size
         if self.window.is_visible(): self.apply_scale() if scale_key(self.store.settings)!=old or moved else self.window._build()
+    def note_settings_return(self,desktop_id=SETTINGS_DESKTOP_ID):
+        """Just before Settings is started or shown: write down the app to go back to when it closes (return_focus.py),
+        the one the Quick Menu shows over, else (a hotkey, TVWCS hidden) the one in use now. Over Settings itself nothing
+        is written, so Settings keeps going back where it would have."""
+        if desktop_id!=SETTINGS_DESKTOP_ID or not self.wm.available: return
+        if self.window is not None and self.window.is_visible(): behind=self._behind
+        else:
+            focused=next((x for x in self.wm.windows() if x.get("focused")),None)
+            behind="settings" if return_focus.is_settings(focused) else return_focus.target_of(focused)
+        if behind!="settings": return_focus.note(behind)
     def open_settings(self,page=None):
         """A status icon or panel's settings button, opening its page (or channel 0, with no page): the Settings app, a
         separate application. It opens where any app would in this mode: an open Settings window is brought up that way,
@@ -716,6 +731,7 @@ class TVWCSApp(Gtk.Application):
         profile=self.default_profile(app) if app else None
         mode=self.launch_mode(profile)
         existing=self.wm.find_matching(profile,app) if profile is not None else None
+        self.note_settings_return()
         self.hide_window(launched=True)
         if existing is not None: self.wm.focus(existing["con_id"],mode)
         else: self.wm.prepare_for_launch(mode)
