@@ -90,3 +90,30 @@ def reload(run=subprocess.run) -> bool:
     """Have sway read its config again (the new hotkeys and window rules); False when it could not."""
     try: return run(["swaymsg","reload"],capture_output=True,timeout=5).returncode==0
     except (OSError,subprocess.SubprocessError): return False
+
+RELOADED_NAME="tvwcs-sway-reloaded"   # in the runtime dir: when TVWCS last had sway read tvwcs.conf again
+
+def conf_is_newer(conf_mtime, sway_started, last_reload=0.0) -> bool:
+    """tvwcs.conf changed after sway last read it: after sway started (its IPC socket is made then) and after
+    TVWCS's last reload."""
+    return conf_mtime>max(sway_started,last_reload or 0.0)
+
+def reload_if_updated(runtime, env=None, conf=CONF, run=subprocess.run, now=None) -> bool:
+    """When an update installed a new tvwcs.conf while sway kept running, sway still has the old one's key bindings
+    and window rules (the volume keys, say) until it reloads or the next login. The launcher calls this as it starts,
+    which an update's restart does too: sway reloads once, and True says it did."""
+    import time
+    env=os.environ if env is None else env
+    sock=env.get("SWAYSOCK")
+    if not sock: return False
+    mark=Path(runtime)/RELOADED_NAME
+    try:
+        # ctime: when the file was installed (dpkg, pacman and rpm keep the package's mtime, from when it was built)
+        conf_mtime=os.stat(conf).st_ctime; started=os.stat(sock).st_ctime
+    except OSError: return False
+    try: last=float(mark.read_text(encoding="ascii").strip())
+    except (OSError,ValueError): last=0.0
+    if not conf_is_newer(conf_mtime,started,last) or not reload(run): return False
+    try: mark.write_text(f"{time.time() if now is None else now}\n",encoding="ascii")
+    except OSError: pass
+    return True
