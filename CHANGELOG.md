@@ -1,5 +1,9 @@
 # Changelog
 
+## 5.20.1 — 2026-11-11
+
+- **A display's scale survives updates.** When TVWCS has sway reload its config (after an update since 5.19.1, or when hotkeys change), sway drops the scale, resolution and arrangement set in **Settings › Displays** and goes back to its own defaults, which is 200 % on many laptops with a 2K screen. TVWCS now puts the saved display settings back straight after each reload it makes.
+
 ## 5.20.0 — 2026-11-11
 
 - **The TV's own remote works over HDMI-CEC.** On a computer whose HDMI port talks CEC (a Raspberry Pi 4 or 5, or a USB adapter such as Pulse-Eight's: Linux shows it as `/dev/cec0`), TVWCS registers with the TV as a playback device named **TVWCS** and turns the TV remote's buttons into key presses: the arrows move, OK is Enter, Back (Exit or Return) is Esc, and the numbers, play, pause, stop, rewind, fast forward, channel up/down (Page Up/Down) and Clear (Backspace) work in TVWCS and in apps alike. Nothing extra to install; it is TVWCS's own code (`cec.py`) talking to the kernel.
