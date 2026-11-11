@@ -33,6 +33,10 @@ class NetworkTests(unittest.TestCase):
         self.assertEqual(qs.read_network("",WIRELESS,lambda i:True),("offline",0))
     def test_icons(self):
         self.assertEqual(qs.network_icon(qs.Status("wifi",70))[0],"network-wireless-signal-good-symbolic")
+        self.assertEqual(qs.updates_icon(qs.Status(updates=3))[2],"3 updates available"); self.assertFalse(qs.updates_shown(qs.Status()))
+        self.assertEqual(qs.updates_icon(qs.Status(reboot=True))[::2],("system-reboot-symbolic","Restart to finish updating"))
+        self.assertEqual(qs.updates_icon(qs.Status(updates=1,reboot=True))[2],"Restart to finish updating (1 update available)")
+        self.assertTrue(qs.updates_shown(qs.Status(reboot=True)))
         self.assertEqual(qs.network_icon(qs.Status("wifi",100))[0],"network-wireless-signal-excellent-symbolic")
         self.assertEqual(qs.network_icon(qs.Status("wifi",5))[0],"network-wireless-signal-none-symbolic")
         self.assertIn("70%",qs.network_icon(qs.Status("wifi",70))[2])

@@ -986,7 +986,12 @@ class UpdatesPage(_SelfUpdate, _Console, Page):
             self.row("Restart to finish updating","",self.confirm_reboot,detail="Some updates are only used after a restart.",
                      icon="system-reboot-symbolic",fallback="↻",ident="reboot")
         for label,problem in s.problems: self.note(f"{label}: {problem}","error")
-        if self.finished: self.outcome=self.outcome_text(self.finished,s); self.finished=None; self._append(f"\n✓ {self.outcome}")
+        if self.finished:
+            label,self.finished=self.finished,None; self.outcome=self.outcome_text(label,s); self._append(f"\n✓ {self.outcome}")
+            if getattr(s,"reboot",False) and label!="Downloading package lists":   # say so now, not only in the row above
+                GLib.idle_add(lambda:(self.confirm_reboot("Restart to finish updating?","Some of the updates (a new kernel, for "
+                              "one) are only used after the computer restarts. Restart now? Unsaved work in open applications "
+                              "may be lost.","Restart now"),GLib.SOURCE_REMOVE)[1])
         if self.outcome: self.note(self.outcome,"state-on")
         self.draw_pacnew(getattr(s,"pacnew",[]))
         if self.log is not None and self.log.get_buffer().get_char_count():
@@ -1134,7 +1139,8 @@ class UpdatesPage(_SelfUpdate, _Console, Page):
         text+=" It asks for your password."
         self.win.confirm(f"Remove {e.name}?",text,"Remove",lambda:self.run_steps(f"Removing {e.name}",[(ubuntu.purge_argv([e.key]),True)]))
 
-    def confirm_reboot(self):
+    def confirm_reboot(self, title="Restart now?", text="Restart the computer now? Unsaved work in open applications may be lost.",
+                       button="Restart"):
         command=command_for("reboot")
         if not command: self.win.notice("Restart","Nothing on this system can restart it from here."); return
         def go():
@@ -1144,7 +1150,7 @@ class UpdatesPage(_SelfUpdate, _Console, Page):
                     if code and privilege.polkit_refused(tail): self.win.run_as_root(command,"Restart",lambda _l:None,lambda c,t:c and self.win.notice("Restart",t))
                     elif code: self.win.notice("Restart",tail)
                 StreamedRun(command,lambda _l:None,done)
-        self.win.confirm("Restart now?","Restart the computer now? Unsaved work in open applications may be lost.","Restart",go)
+        self.win.confirm(title,text,button,go)
 
 # ====================================================================== System information
 class SystemPage(Page):
