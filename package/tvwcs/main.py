@@ -230,13 +230,18 @@ class TVWCSApp(Gtk.Application):
         if not os.environ.get("SWAYSOCK"):
             problem=control_display.restore_tearing()
             if problem: print(f"Could not set tear-free drawing: {problem}",file=sys.stderr)
+    def _sway_reloaded(self):
+        """sway drops every output setting it was given over IPC when it reloads (the scale Settings set goes back to
+        sway's default, 200 % on many laptops), so put the saved display settings back."""
+        threading.Thread(target=self._restore_displays,daemon=True).start()
     def _on_stop_signal(self): self.quit(); return GLib.SOURCE_REMOVE
     def do_activate(self):
         first=self.window is None
         self.refresh_data(rebuild=False)
         if first:
             self.apply_look(); self._update_layout(False,False,focus_output=False); self.window=TVWCSWindow(self)
-            if self.wm.available and sway_include.reload_if_updated(RUNTIME): print("TVWCS: tvwcs.conf was updated; sway reloaded it",file=sys.stderr)
+            if self.wm.available and sway_include.reload_if_updated(RUNTIME):
+                print("TVWCS: tvwcs.conf was updated; sway reloaded it",file=sys.stderr); self._sway_reloaded()
             self.apply_hotkeys(); self.idle.apply(); self.cursor.apply(); self.volume_guard.apply(); self.cec.apply(); self.watch.start(); GLib.timeout_add(1500,self._run_startup_action)
         self.window.set_visible(False)
     def do_shutdown(self):
@@ -699,7 +704,8 @@ class TVWCSApp(Gtk.Application):
         except OSError: old=None
         if old!=text:
             try:
-                HOTKEYS_FILE.parent.mkdir(parents=True,exist_ok=True); HOTKEYS_FILE.write_text(text,encoding="utf-8"); self.wm.reload()
+                HOTKEYS_FILE.parent.mkdir(parents=True,exist_ok=True); HOTKEYS_FILE.write_text(text,encoding="utf-8")
+                if self.wm.reload(): self._sway_reloaded()
                 GLib.timeout_add(800,lambda:(self.watch.apply_bar(),self.apply_look(),GLib.SOURCE_REMOVE)[2])   # a reload shows the bar again and drops the background
             except OSError as exc: self.notify_message(f"Could not save the hotkeys: {exc}")
     @staticmethod
