@@ -368,8 +368,8 @@ class AppearancePage(_ConfigPage):
 
 # ====================================================================== Remote and hotkeys
 class HotkeysPage(_ConfigPage):
-    """The keys that open the Quick Menu and Applications from a keyboard, a remote or a gamepad (TVWCS writes
-    hotkeys.conf when it reads them again), and the apps that have a hotkey of their own."""
+    """The keys that open the Quick Menu and switch to the app used last from a keyboard, a remote or a gamepad (TVWCS
+    writes hotkeys.conf when it reads them again), and the apps that have a hotkey of their own."""
     key="hotkeys"; title="Remote and hotkeys"; icon="input-keyboard-symbolic"; fallback="⌨"; sway_only=True
     refreshable=True    # ⟳ reads the HDMI-CEC status again
     not_added=False     # this is a sway session without TVWCS's include line: the page offers to add it
@@ -384,16 +384,22 @@ class HotkeysPage(_ConfigPage):
             self.section("THIS SWAY SESSION")
             self.row("Add TVWCS to sway","",self.add_to_sway,icon="list-add-symbolic",fallback="+",ident="key:add-sway",
                      detail="TVWCS is not part of this session yet, so these hotkeys do nothing here")
-        self.section("QUICK MENU HOTKEYS")
-        for device in DEVICES:
-            for name in DEVICE_ACTIONS[device]:
-                self.row(DEVICE_LABELS[device],describe(st["hotkeys"][device][name]),lambda d=device,n=name:self.change_hotkey(store,d,n),ident=f"key:{device}:{name}")
         has_cec=cec.present()
-        if has_cec:
-            self.row(CEC_LABEL,cec.button_label(st["cec"]["menu"]) if st["cec"]["enabled"] else "Off",lambda:self.choose_cec_button(store),ident="key:cec:menu")
-        self.note("Keyboard: a modifier tapped on its own (such as Super) triggers when it is released, so Super combinations keep working. "
-                  "Remote: most remotes send ordinary keys; F2 suits many of them. Gamepad: a mapper such as AntiMicroX turns its buttons into keys."
-                  +(" TV remote: a button of the TV's own remote, sent over HDMI-CEC." if has_cec else ""))
+        for name,heading in (("menu","QUICK MENU HOTKEYS"),("last","LAST APP HOTKEYS")):
+            self.section(heading)
+            for device in DEVICES:
+                if name in DEVICE_ACTIONS[device]:
+                    self.row(DEVICE_LABELS[device],describe(st["hotkeys"][device][name]),lambda d=device,n=name:self.change_hotkey(store,d,n),ident=f"key:{device}:{name}")
+            if has_cec:
+                self.row(CEC_LABEL,cec.button_label(st["cec"][name]) if st["cec"]["enabled"] else "Off",lambda n=name:self.choose_cec_button(store,n),ident=f"key:cec:{name}")
+            if name=="menu":
+                self.note("Keyboard: a modifier tapped on its own (such as Super) triggers when it is released, so Super combinations keep working. "
+                          "Remote: most remotes send ordinary keys; F2 suits many of them. Gamepad: a mapper such as AntiMicroX turns its buttons into keys."
+                          +(" TV remote: a button of the TV's own remote, sent over HDMI-CEC." if has_cec else ""))
+            else:
+                self.note("Switches to the app you used before the one on screen, like a TV's previous channel button; press it again to go back. "
+                          "Over the Quick Menu it switches from the app the menu is shown over."
+                          +(" On the TV's remote, Previous channel is often labelled PRE-CH, Recall, Last or ↺." if has_cec else ""))
         if has_cec: self.draw_cec(st["cec"])
         self.section("APPLICATION HOTKEYS")
         profiles=store.hotkey_profiles()
@@ -403,7 +409,7 @@ class HotkeysPage(_ConfigPage):
             self.row(p.name,describe(p.hotkey),lambda pid=p.id,name=p.name:self.change_app_hotkey(store,pid,name),ident=f"key:app:{p.id}",extras=[remove])
         if profiles: self.note(APP_HOTKEY_HINT)
         self.row("Reset all hotkeys","Defaults",self.reset_hotkeys,ident="key:reset",
-                 detail="Keyboard: tap Super. Remote: F2. Gamepad: none."+(f" TV remote: {cec.button_label(cec.DEFAULT_MENU_BUTTON)}." if has_cec else "")
+                 detail="Quick Menu: tap Super, F2 on a remote. Last app: Super+Tab."+(f" TV remote: {cec.button_label(cec.DEFAULT_MENU_BUTTON)} and {cec.button_label(cec.DEFAULT_LAST_BUTTON)}." if has_cec else "")
                         +" Removes every application hotkey")
 
     def draw_cec(self, opts):
@@ -427,19 +433,26 @@ class HotkeysPage(_ConfigPage):
                   "buttons or Home. The TV's own setting may be called Anynet+ (Samsung), SimpLink (LG), Bravia Sync (Sony) or CEC.")
     def cec_toggle(self, key):
         self.change(lambda s:s.settings["cec"].update({key:not s.settings["cec"][key]}))
-    def choose_cec_button(self, store):
+    def choose_cec_button(self, store, action="menu"):
+        """The TV remote's button for the Quick Menu ("menu") or the last app ("last"). A button the other one had is
+        taken from it."""
         status=cec.read_status(runtime_dir()); seen=set(status.seen) if status is not None else set()
-        options=[(b.id,b.label+("  (your TV sends it)" if b.id in seen else "")) for b in cec.HOTKEY_CHOICES]+[("","None")]
+        other="last" if action=="menu" else "menu"
+        options=[(b.id,b.label+("  (your TV sends it)" if b.id in seen else "")+(f"  ({ACTION_LABELS[other]} now)" if b.id==store.settings["cec"][other] else ""))
+                 for b in cec.HOTKEY_CHOICES]+[("","None")]
         def chosen(button_id):
-            self.change(lambda s:s.settings["cec"].update(menu=button_id,enabled=True))
-        self.win.choose_option(f"{CEC_LABEL}: {ACTION_LABELS['menu']}",options,store.settings["cec"]["menu"] if store.settings["cec"]["enabled"] else None,chosen)
+            def edit(s):
+                if button_id and s.settings["cec"][other]==button_id: s.settings["cec"][other]=""
+                s.settings["cec"].update({action:button_id,"enabled":True})
+            self.change(edit)
+        self.win.choose_option(f"{CEC_LABEL}: {ACTION_LABELS[action]}",options,store.settings["cec"][action] if store.settings["cec"]["enabled"] else None,chosen)
 
     def change_hotkey(self, store, device, name):
         label=f"{DEVICE_LABELS[device]}: {ACTION_LABELS[name]}"
         def chosen(spec):
-            if spec or not store.settings["hotkeys"][device][name]: self.change(lambda s:s.set_slot_hotkey(device,name,spec)); return
+            if spec or not store.settings["hotkeys"][device][name] or name!="menu": self.change(lambda s:s.set_slot_hotkey(device,name,spec)); return
             # Clear: without this key the Quick Menu may only open from another device, so ask first
-            others=[DEVICE_LABELS[d] for d in DEVICES if d!=device and any(store.settings["hotkeys"][d].values())]
+            others=[DEVICE_LABELS[d] for d in DEVICES if d!=device and store.settings["hotkeys"][d].get("menu")]
             self.win.confirm("Remove this Quick Menu hotkey?",
                              f"{describe(store.settings['hotkeys'][device][name])} will no longer open the Quick Menu from the {DEVICE_LABELS[device].lower()}. "
                              +(f"It still opens with the {' or '.join(o.lower() for o in others)} hotkey." if others else
@@ -467,9 +480,9 @@ class HotkeysPage(_ConfigPage):
             for device in DEVICES:
                 for name in DEVICE_ACTIONS[device]: s.set_slot_hotkey(device,name,DEFAULT_HOTKEYS[device][name])
             for p in s.hotkey_profiles(): s.set_profile_hotkey(p.id,"")
-            s.settings["cec"]["menu"]=cec.DEFAULT_MENU_BUTTON
+            s.settings["cec"].update(menu=cec.DEFAULT_MENU_BUTTON,last=cec.DEFAULT_LAST_BUTTON)
         n=len(ConfigStore().hotkey_profiles())
-        self.win.confirm("Reset all hotkeys?","The Quick Menu hotkeys go back to their defaults"+(f", and the {n} application hotkey{'s' if n!=1 else ''} are removed." if n else "."),
+        self.win.confirm("Reset all hotkeys?","The Quick Menu and Last app hotkeys go back to their defaults"+(f", and the {n} application hotkey{'s' if n!=1 else ''} are removed." if n else "."),
                          "Reset",lambda:self.change(edit))
 
 CEC_LABEL="TV remote (HDMI-CEC)"

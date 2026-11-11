@@ -2,8 +2,9 @@
 No GTK dependency.
 
 There are three sets of hotkeys, one per input device: keyboard, remote and gamepad. Each set has a key for the
-Quick Menu ("menu"); it may be unset (""). (Before 4.0 there were Applications and Fullscreen keys too: they are
-dropped.) A gamepad sends no key presses by itself: map its
+Quick Menu ("menu") and one that switches to the app used last ("last", see last_app.py); either may be unset ("").
+(Before 4.0 there were Applications and Fullscreen keys too: they are dropped.) A gamepad sends no key presses by
+itself: map its
 buttons to keys with a tool such as AntiMicroX, then capture those keys here. Any launch profile can have a hotkey of
 its own too (see model.LaunchProfile.hotkey); it is bound here as `tvwcs launch <profile id>`.
 
@@ -14,14 +15,15 @@ from __future__ import annotations
 import re, shlex
 
 DEVICES=("keyboard","remote","gamepad")
-ACTIONS=("menu",)   # what every device's set has
+ACTIONS=("menu","last")   # what every device's set has
 DEVICE_ACTIONS={"keyboard":ACTIONS,"remote":ACTIONS,"gamepad":ACTIONS}
 DEVICE_LABELS={"keyboard":"Keyboard","remote":"Remote","gamepad":"Gamepad"}
-ACTION_LABELS={"menu":"Quick Menu","guide":"Applications","fullscreen":"Fullscreen"}
+ACTION_LABELS={"menu":"Quick Menu","last":"Last app","guide":"Applications","fullscreen":"Fullscreen"}
+ACTION_COMMANDS={"menu":"toggle","last":"last-app"}   # `tvwcs <command>` each runs
 DEFAULT_HOTKEYS={
-    "keyboard":{"menu":"Mod4"},          # tap Super for the Quick Menu
-    "remote":{"menu":"F2"},
-    "gamepad":{"menu":""},
+    "keyboard":{"menu":"Mod4","last":"Mod4+Tab"},   # tap Super for the Quick Menu; Super+Tab for the app used last
+    "remote":{"menu":"F2","last":""},
+    "gamepad":{"menu":"","last":""},
 }
 _SAFE_ID=re.compile(r"[A-Za-z0-9_-]+")
 MODIFIER_ORDER=("Mod4","Mod1","Control","Shift")
@@ -113,6 +115,13 @@ def clean_hotkeys(raw):
         else: seen.add(spec)
     return hk
 
+def defaulted(raw):
+    """The (device, action) slots a saved settings value does not set, so clean_hotkeys gave them their default: the
+    "last" slots in a config from before 5.21. Only for a saved set; with none at all, nothing is reported."""
+    if not isinstance(raw,dict): return []
+    if any(a in raw for a in ACTIONS) and not any(d in raw for d in DEVICES): raw={"remote":raw}
+    return [(d,a) for d in DEVICES for a in DEVICE_ACTIONS[d] if not isinstance((raw.get(d) if isinstance(raw.get(d),dict) else {}).get(a),str)]
+
 def used_by(hotkeys,spec,skip=None):
     """The (device, action) that already has `spec`, ignoring the slot `skip`; None when it is free."""
     return next(((d,a) for d,a,s in assigned(hotkeys) if s==spec and (d,a)!=skip),None)
@@ -131,7 +140,7 @@ def render_bindings(hotkeys, command, keycodes=None, app_keys=(), tv=False) -> s
         bound.add(key)   # sway has no end-of-line comments: a trailing "# ..." would become arguments to the command
         lines.append(f"# {comment} ({describe(spec)})"); lines.append(f"{key} {action}")
     for device,action,spec in assigned(hotkeys):
-        add(spec,f"{DEVICE_LABELS[device]}: {ACTION_LABELS[action]}",f"exec --no-startup-id {q} toggle")
+        add(spec,f"{DEVICE_LABELS[device]}: {ACTION_LABELS[action]}",f"exec --no-startup-id {q} {ACTION_COMMANDS[action]}")
     for spec,profile_id,name in app_keys:
         if spec and valid_spec(spec) and _SAFE_ID.fullmatch(profile_id or ""):   # an id from a hand-edited config must not break the line
             add(spec,f"Application: {' '.join(str(name).split())}",f"exec --no-startup-id {q} launch {profile_id}")

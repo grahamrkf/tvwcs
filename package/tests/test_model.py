@@ -85,11 +85,11 @@ class SettingsAndProfileTests(unittest.TestCase):
             path=Path(d)/"c.json"
             s=ConfigStore(path).settings
             self.assertEqual((s["scale"],s["close_on_click_outside"],s["hotkeys"],s["startup"]["mode"],s["margin"],s["keyboard"]),
-                             ("",True,{"keyboard":{"menu":"Mod4"},"remote":{"menu":"F2"},"gamepad":{"menu":""}},"none",0,"hidden"))
+                             ("",True,{"keyboard":{"menu":"Mod4","last":"Mod4+Tab"},"remote":{"menu":"F2","last":""},"gamepad":{"menu":"","last":""}},"none",0,"hidden"))
             path.write_text(json.dumps({"settings":{"scale":"huge","close_on_click_outside":False,"keyboard":"tiny","hotkeys":{"keyboard":{"menu":"Mod1","guide":"F3"},"gamepad":{"menu":"F7"}},"startup":{"mode":"app","profile_id":"p1"}}}))
             s=ConfigStore(path).settings
             self.assertEqual((s["scale"],s["close_on_click_outside"],s["keyboard"]),("",False,"hidden"))
-            self.assertEqual(s["hotkeys"],{"keyboard":{"menu":"Mod1"},"remote":{"menu":"F2"},"gamepad":{"menu":"F7"}}); self.assertEqual((s["startup"]["mode"],s["startup"]["profile_id"]),("app","p1"))
+            self.assertEqual(s["hotkeys"],{"keyboard":{"menu":"Mod1","last":"Mod4+Tab"},"remote":{"menu":"F2","last":""},"gamepad":{"menu":"F7","last":""}}); self.assertEqual((s["startup"]["mode"],s["startup"]["profile_id"]),("app","p1"))
     def test_quick_menu_corner_and_options_buttons(self):
         with tempfile.TemporaryDirectory() as d:
             path=Path(d)/"c.json"
@@ -128,12 +128,24 @@ class SettingsAndProfileTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             path=Path(d)/"c.json"; path.write_text(json.dumps({"settings":{"hotkeys":{"remote":{"menu":"F5","guide":"F5"},"gamepad":{"menu":"Mod4"}}}}))
             hk=ConfigStore(path).settings["hotkeys"]
-            self.assertEqual((hk["remote"],hk["gamepad"]["menu"]),({"menu":"F5"},""))   # Mod4 is already the keyboard's
+            self.assertEqual((hk["remote"],hk["gamepad"]["menu"]),({"menu":"F5","last":""},""))   # Mod4 is already the keyboard's
     def test_old_single_hotkey_set_becomes_the_remote_set(self):
         with tempfile.TemporaryDirectory() as d:
             path=Path(d)/"c.json"; path.write_text(json.dumps({"settings":{"hotkeys":{"menu":"F9","guide":"Shift+F9"}}}))
             hk=ConfigStore(path).settings["hotkeys"]
-            self.assertEqual((hk["remote"],hk["keyboard"]["menu"]),({"menu":"F9"},"Mod4"))
+            self.assertEqual((hk["remote"],hk["keyboard"]["menu"]),({"menu":"F9","last":""},"Mod4"))
+    def test_the_new_last_app_key_gives_way_to_an_app_that_has_it(self):
+        with tempfile.TemporaryDirectory() as d:   # a config from before 5.21, where an app already has Super+Tab
+            path=Path(d)/"c.json"; path.write_text(json.dumps({"settings":{"hotkeys":{"keyboard":{"menu":"Mod4"}}},
+                "profiles":[{"id":"p1","desktop_id":"kodi.desktop","name":"Kodi","hotkey":"Mod4+Tab"}]}))
+            store=ConfigStore(path)
+            self.assertEqual((store.settings["hotkeys"]["keyboard"]["last"],store.get("p1").hotkey),("","Mod4+Tab"))
+            store.settings["hotkeys"]["keyboard"]["last"]="Mod4+Tab"; store.get("p1").hotkey=""; store.save()   # saved as chosen
+            self.assertEqual(ConfigStore(path).settings["hotkeys"]["keyboard"]["last"],"Mod4+Tab")
+            path.write_text(json.dumps({"settings":{"hotkeys":{"keyboard":{"menu":"Mod4","last":"Mod4+Tab"}}},
+                "profiles":[{"id":"p1","desktop_id":"kodi.desktop","name":"Kodi","hotkey":"Mod4+Tab"}]}))
+            store=ConfigStore(path)   # set by hand on both: the slot keeps it, as before
+            self.assertEqual((store.settings["hotkeys"]["keyboard"]["last"],store.get("p1").hotkey),("Mod4+Tab",""))
     def test_defaults_are_not_shared_between_stores(self):
         with tempfile.TemporaryDirectory() as d:
             a=ConfigStore(Path(d)/"a.json"); a.settings["hotkeys"]["remote"]["menu"]="F9"

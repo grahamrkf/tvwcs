@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- **Switch to the app used last with Super+Tab.** Like a TV remote's previous channel button: **Super+Tab** brings back the app you used before the one on screen (in TV mode its workspace, full screen as it was), and pressing it again goes back, so it flips between two apps. Over the Quick Menu it switches from the app the menu is shown over; with no other app open it says so in the Quick Menu.
+  - **Settings › Remote and hotkeys** has a new **Last app hotkeys** section: a key for the keyboard (Super+Tab), the remote and the gamepad (none until you choose one), and on a computer with an HDMI-CEC port the TV remote's button (**Previous channel**, often labelled PRE-CH, Recall or Last). **Reset all hotkeys** sets them back too.
+  - An app that already had Super+Tab as its own hotkey keeps it, and the keyboard's Last app key starts unset.
+  - `tvwcs last-app` does the same from a script or a key binding of your own. TVWCS follows sway's window events to know the order apps were used in (`last_app.py`).
 - **A session that ends by itself leaves a trace.** Login screens such as greetd drop everything sway prints, so when sway quit back to the login screen nothing said why. TVWCS's session now sends sway's messages (and the launcher's and apps', which share them) to the journal: `journalctl -b -t sway`. At a text console they still show on screen.
 
 ## 5.20.1 — 2026-11-11

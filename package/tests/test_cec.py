@@ -47,6 +47,13 @@ class MessageTests(unittest.TestCase):
         logic.clock.t+=2
         self.assertEqual(logic.message(bytes([0x04,0x44,0x72])).hotkey,"menu")   # the Released was lost
 
+    def test_previous_channel_switches_to_the_last_app(self):
+        logic=claimed()
+        self.assertEqual(logic.message(bytes([0x04,0x44,0x32])).hotkey,"last")
+        self.assertEqual(logic.message(bytes([0x04,0x44,0x32])).hotkey,"")   # still held
+        logic.last_button=""; logic.message(bytes([0x04,0x45]))
+        a=logic.message(bytes([0x04,0x44,0x32])); self.assertEqual((a.hotkey,a.keys),("",[]))
+
     def test_menu_button_none(self):
         logic=claimed(menu="")
         self.assertEqual(logic.message(bytes([0x04,0x44,0x72])).hotkey,"")
@@ -103,6 +110,9 @@ class SettingsTests(unittest.TestCase):
         self.assertEqual(cec.clean_settings({"menu":"select"})["menu"],cec.DEFAULT_MENU_BUTTON)   # OK can't be a hotkey
         self.assertEqual(cec.clean_settings({"menu":"digit_1"})["menu"],cec.DEFAULT_MENU_BUTTON)
         self.assertEqual(cec.clean_settings({"menu":""})["menu"],"")
+        self.assertEqual(cec.clean_settings({})["last"],"previous_channel")
+        self.assertEqual(cec.clean_settings({"last":"blue"})["last"],"blue"); self.assertEqual(cec.clean_settings({"last":"up"})["last"],"previous_channel")
+        self.assertEqual(cec.clean_settings({"menu":"blue","last":"blue"})["last"],"")   # one button, one job: the Quick Menu's
     def test_in_config(self):
         self.assertEqual(_clean_settings({})["cec"],cec.DEFAULTS)
         self.assertEqual(_clean_settings({"cec":{"menu":"blue"}})["cec"]["menu"],"blue")
