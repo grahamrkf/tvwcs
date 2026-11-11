@@ -38,6 +38,7 @@ Recommends:     bluez
 Recommends:     rsms-inter-fonts
 Recommends:     dnf5-plugins
 Recommends:     pciutils
+Recommends:     gtk4-layer-shell
 Suggests:       greetd
 Suggests:       openssh-server
 

@@ -1,5 +1,12 @@
 # Changelog
 
+## 5.17.0 — 2026-11-11
+
+- **On-screen volume indicator.** The remote's or keyboard's volume keys now show the volume for a second near the bottom of the screen: the speaker icon, a bar and the percentage (or "Muted"), in the current theme and interface size, above the screen edge margin. It shows over full-screen apps (a video, a game) without taking the keys from them, and stays up while a key is held. The bar measures up to the volume keys' limit: 100 %, or 150 % with over-amplification.
+  - **The mute key** is now bound too (`tvwcs volume mute`), so muting shows the indicator as well.
+  - It is a small process of its own (`python3 -m tvwcs.osd`), started by the first volume key and then kept running, so later presses show at once. It draws without the GPU to stay small (about 60 MB).
+  - It needs **gtk4-layer-shell** to show over full-screen apps: the .deb recommends `gir1.2-gtk4layershell-1.0` and `libgtk4-layer-shell0`, the .rpm `gtk4-layer-shell`; on Arch install `gtk4-layer-shell`. Without it (Ubuntu 24.04 doesn't have it) the indicator is a floating window that never takes the focus, shown over everything but a full-screen app.
+
 ## 5.16.1 — 2026-11-11
 
 - **The volume limit holds whatever raises the volume.** The remote's volume keys could still take the sound past 150 % (5.10.1 only changed sway's own key binding, so anything else that turned the volume up had no limit). TVWCS now watches the sound server (`pactl subscribe`) and brings any output above the limit straight back down: 100 %, or 150 % with Settings › Sound › Allow over-amplification. That covers volume keys bound somewhere else, apps, pavucontrol and `pactl` alike, and turning over-amplification off brings a louder volume down to 100 % at once. The volume keys and the Quick Menu's and Settings' − / + now take a volume that is above the limit down to it, instead of leaving it there.
