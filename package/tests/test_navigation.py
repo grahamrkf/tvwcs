@@ -156,7 +156,7 @@ class NavigationTests(unittest.TestCase):
         self.assertTrue(win._move_within_group(1)); self.assertTrue(win._move_within_group(-1)); win.app.show_panels.assert_not_called(); self.assertIs(W.focus,opt)
     def test_an_open_status_panel_is_between_search_and_the_status_row(self):
         win=make_window(); p=W("wifi"); win._panel_groups=[NavGroup([p])]; status=NavGroup([W("wifi icon"),W("power")]); win._status_group=status
-        clock=NavGroup([W("clock"),W("guide")]); win._clock_group=clock   # the clock and ⊞: a row below the status icons
+        clock=NavGroup([W("clock"),W("settings"),W("guide")]); win._clock_group=clock   # the clock, ⚙ and ⊞: a row below the status icons
         order=win._ordered_groups("quick"); self.assertEqual(order[-3:],[win._panel_groups[0],status,clock]); self.assertEqual(order[-4],[win.search_entry])
     def test_a_panel_stays_open_while_the_selection_is_on_what_it_owns(self):
         win=make_window(); collapse=MagicMock(); opener=W("power"); inside=W("lock")
