@@ -1,5 +1,9 @@
 # Changelog
 
+## 5.18.0 — 2026-11-11
+
+- **Closing Settings goes back to the app you were using.** Open Settings over an app (from the Quick Menu, a status icon, a hotkey, or `tvwcs settings` in a terminal) and closing it with Back/Esc brings that app back, full screen again if it was, instead of leaving an empty workspace and the Quick Menu in TV mode. Opened over an empty screen, closing it shows the Quick Menu as before. TVWCS notes the app just before it opens Settings (`return_focus.py`); Settings closed from elsewhere (the Quick Menu's ⋯ menu) leaves the focus where you are.
+
 ## 5.17.0 — 2026-11-11
 
 - **On-screen volume indicator.** The remote's or keyboard's volume keys now show the volume for a second near the bottom of the screen: the speaker icon, a bar and the percentage (or "Muted"), in the current theme and interface size, above the screen edge margin. It shows over full-screen apps (a video, a game) without taking the keys from them, and stays up while a key is held. The bar measures up to the volume keys' limit: 100 %, or 150 % with over-amplification.

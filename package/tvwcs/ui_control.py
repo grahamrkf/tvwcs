@@ -15,11 +15,12 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Gdk", "4.0")
 from gi.repository import Gdk, Gio, GLib, Gtk
 
-from tvwcs import privilege
+from tvwcs import privilege, return_focus
 from tvwcs.control_updates import is_prompt
 from tvwcs.hotkeys import HotkeyCapture, describe, is_navigation
 from tvwcs.model import ConfigStore, effective_scale, key_hints, scale_key, tv_mode
 from tvwcs.theme import render_css
+from tvwcs.window_manager import WindowManager
 from tvwcs import cursor
 from tvwcs.widgets import METRO_COLORS, NavGroup, PointerWatch, S, clear_box, glyph, held_modifiers, screen_height, scroll_into_view, scroll_to_show, set_scale, usable, use_retro
 
@@ -182,9 +183,16 @@ class ControlWindow(Gtk.ApplicationWindow):
         key=Gtk.EventControllerKey(); key.set_propagation_phase(Gtk.PropagationPhase.CAPTURE)
         key.connect("key-pressed",self._key_pressed); key.connect("key-released",self._key_released); self.add_controller(key)
         self.connect("notify::focus-widget",self._focus_changed)
+        self.connect("close-request",self._closing)
         self._provider=Gtk.CssProvider(); display=Gdk.Display.get_default()
         if display: Gtk.StyleContext.add_provider_for_display(display,self._provider,Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
         self._load_css(); self._build()
+
+    def _closing(self, *_):
+        """Closed from here (Back from the tabs, sway's kill key): back to the app in use before Settings opened. Closed
+        from elsewhere (the Quick Menu's ⋯ menu), the focus stays where the user is."""
+        if self.is_active() and self.app.back_to: return_focus.go_back(self.app.wm,self.app.back_to)
+        return False
 
     def _load_css(self):
         retro=self.app.style=="retro"; use_retro(retro,self.app.retro_font)
@@ -691,10 +699,19 @@ class ControlPanelApp(Gtk.Application):
         self.scale_key=scale_key(settings); self.scale=effective_scale(self.scale_key); self.accent=settings.get("accent","#0078d7"); self.window=None
         self.theme=settings.get("theme","dark"); self.keyboard=settings.get("keyboard","hidden")
         self.style=settings.get("style","modern"); self.phosphor=settings.get("phosphor","green"); self.retro_font=settings.get("retro_font","pixel")
+        self.wm=WindowManager(); self.back_to=None   # the app to go back to when Settings closes (return_focus.py)
+    def note_return(self):
+        """Settings is being opened or brought up: what to go back to is what TVWCS noted, else (a shell, the user's own
+        key binding) the window sway has focused now. Brought up again from Settings itself, it stays as it was."""
+        noted=return_focus.take()
+        if noted is not return_focus.MISSING: self.back_to=noted; return
+        here=return_focus.focused_app(self.wm) if self.wm.available else None
+        if here is not None: self.back_to=here
     def do_startup(self):
         Gtk.Application.do_startup(self); self.scale=effective_scale(self.scale_key,screen_height()); set_scale(self.scale)   # fitted to the screen, now there is one
     def do_command_line(self, command_line):
         args=command_line.get_arguments()[1:]
+        self.note_return()   # before the window is shown, so sway still has the app focused
         if self.window is None: self.window=ControlWindow(self)
         self.window.present()
         if args[:1]==[ADD_TO_SWAY]:   # plain `tvwcs` in a sway session without TVWCS (main.start_here): offer to add it
