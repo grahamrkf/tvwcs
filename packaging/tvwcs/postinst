@@ -4,9 +4,17 @@
 # a conffile, kept until a purge): without it the computer shows its start-up text again.
 # 5.0.x wrote greetd's text login as plain "agreety", which Debian keeps in /usr/sbin, off _greetd's PATH: after logging
 # out there was no login at all. The full path fixes it.
+# 5.20.0's udev rule (the TV remote over HDMI-CEC) applies now, not only after a restart: the logged-in user gets
+# /dev/cec* and /dev/uinput.
 set -e
 if [ "$1" = configure ]; then
     python3 -m compileall -q /usr/lib/tvwcs/tvwcs >/dev/null 2>&1 || true
+    modprobe uinput 2>/dev/null || true
+    if [ -d /run/systemd/system ] && command -v udevadm >/dev/null 2>&1; then
+        udevadm control --reload-rules 2>/dev/null || true
+        udevadm trigger --action=change --subsystem-match=cec 2>/dev/null || true
+        udevadm trigger --action=change --subsystem-match=misc --sysname-match=uinput 2>/dev/null || true
+    fi
     LOGO=/etc/default/grub.d/tvwcs-boot-logo.cfg
     if [ -f "$LOGO" ] && ! dpkg-query -W -f='${db:Status-Abbrev}' tvwcs-boot-logo 2>/dev/null | grep -q '^ii'; then
         rm -f "$LOGO"

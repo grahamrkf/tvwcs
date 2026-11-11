@@ -4,6 +4,7 @@ import copy, json, os, re, shlex, uuid
 from dataclasses import dataclass, asdict
 from pathlib import Path
 
+from tvwcs.cec import DEFAULTS as CEC_DEFAULTS, clean_settings as clean_cec
 from tvwcs.hotkeys import ACTION_LABELS, DEFAULT_HOTKEYS, DEVICE_LABELS, assigned, clean_hotkeys, valid_spec
 from tvwcs.pinlock import valid_hash
 from tvwcs.power import clean_critical, clean_idle
@@ -160,6 +161,7 @@ DEFAULT_SETTINGS={
     "idle_battery":{"screen_off":0,"lock":0,"sleep":0},   # the same, while a laptop runs on its battery
     "battery_critical":{"action":"shutdown","percent":5},   # what to do when the battery is nearly empty (power.CRITICAL_ACTIONS)
     "hotkeys":DEFAULT_HOTKEYS,      # keyboard / remote / gamepad sets; deep-copied with the rest of the defaults
+    "cec":CEC_DEFAULTS,             # the TV's remote over HDMI-CEC (cec.py): on, TV power, the button that opens the Quick Menu
     "startup":{"mode":"none","profile_id":"","last_profile_id":""},   # mode: STARTUP_MODES
 }
 PIN_LAUNCH="launch"                  # the PIN is asked when the profile is launched
@@ -216,6 +218,7 @@ def _clean_settings(raw) -> dict:
                 "audio_boost","lock_at_start"):
         if isinstance(raw.get(key),bool): s[key]=raw[key]
     s["hotkeys"]=clean_hotkeys(raw.get("hotkeys"))
+    s["cec"]=clean_cec(raw.get("cec"))
     s["idle"]=clean_idle(raw.get("idle")); s["idle_battery"]=clean_idle(raw.get("idle_battery"))
     s["battery_critical"]=clean_critical(raw.get("battery_critical"))
     st=raw.get("startup")

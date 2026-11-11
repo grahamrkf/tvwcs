@@ -75,13 +75,13 @@ Logic modules have no GTK dependency and are tested without a display.
 | Area | Modules |
 |---|---|
 | Core | `model` (profiles, settings, layout, search), `applications` (discovery, window matching), `workspaces`, `ownership`, `profile_draft`, `pinlock`, `hotkeys` |
-| System | `window_manager` (sway IPC), `return_focus`, `system_actions`, `privilege`, `power`, `lockscreen`, `cursor`, `features`, `session`, `tv_mode`, `quick_status`, `selfupdate`, `loginscreen`, `account`, `servermode`, `sway_include`, `distro`, `appearance`, `usage` |
+| System | `window_manager` (sway IPC), `cec` (the TV remote over HDMI-CEC: kernel ioctls, a uinput keyboard, TV power), `return_focus`, `system_actions`, `privilege`, `power`, `lockscreen`, `cursor`, `features`, `session`, `tv_mode`, `quick_status`, `selfupdate`, `loginscreen`, `account`, `servermode`, `sway_include`, `distro`, `appearance`, `usage` |
 | Settings back ends | `control_cmd`, `control_sound`, `control_display`, `control_bluetooth`, `control_network`, `control_iwd`, `control_datetime`, `control_storage`, `control_updates`, `control_ubuntu`, `control_ssh`, `control_sysinfo` |
 | GTK interface | `main` (app, CLI), `ui_window` (Quick Menu, Applications, dialogs, on-screen keyboard), `ui_editors` (profile editor), `ui_margin`, `ui_control`, `ui_control_pages` and `ui_control_login` (Settings), `widgets`, `theme`, `retro` |
 
 ```
 package/tvwcs/   modules                  package/tests/  unit tests
-package/bin/     the tvwcs launcher       data/           tvwcs.conf, the session, .desktop files, icons
+package/bin/     the tvwcs launcher       data/           tvwcs.conf, the session, .desktop files, icons, the CEC udev rule
 scripts/         tests, packages, release packaging/      the Debian control files, the Fedora spec and the Arch PKGBUILD
 docs/            install guides for Debian, Arch and Fedora
 ```

@@ -1,5 +1,13 @@
 # Changelog
 
+## 5.20.0 — 2026-11-11
+
+- **The TV's own remote works over HDMI-CEC.** On a computer whose HDMI port talks CEC (a Raspberry Pi 4 or 5, or a USB adapter such as Pulse-Eight's: Linux shows it as `/dev/cec0`), TVWCS registers with the TV as a playback device named **TVWCS** and turns the TV remote's buttons into key presses: the arrows move, OK is Enter, Back (Exit or Return) is Esc, and the numbers, play, pause, stop, rewind, fast forward, channel up/down (Page Up/Down) and Clear (Backspace) work in TVWCS and in apps alike. Nothing extra to install; it is TVWCS's own code (`cec.py`) talking to the kernel.
+  - **A TV remote hotkey.** **Settings › Remote and hotkeys** has a fourth Quick Menu hotkey, **TV remote (HDMI-CEC)**, beside the keyboard, remote and gamepad ones: a button picked from a list (Red by default; the colour buttons, Home, Info, Guide and the menu buttons are offered, and the ones your TV has sent are marked). It is shown only on a computer with a CEC port.
+  - **TV power.** When TVWCS starts and when the computer wakes, the TV turns on and switches to it; when the computer sleeps or shuts down, the TV goes to standby; and, if you turn it on, turning the TV off puts the computer to sleep. Each is a switch in a new **TV remote (HDMI-CEC)** section of the same page, which also shows whether the TV answered, on which HDMI input, and the last button received.
+  - TVWCS answers what the TV asks of a playback device (power status, menu status, which input is active) so TVs keep passing buttons on. Which buttons arrive depends on the TV: most send the arrows, OK, Back and the numbers; fewer send the colour buttons or Home; most keep volume for themselves. If an app such as Kodi uses HDMI-CEC itself, TVWCS leaves the port alone (or turn **Use the TV's remote** off).
+  - **Packaging:** a udev rule (`70-tvwcs-cec.rules`) lets the person at the computer use `/dev/cec*` and `/dev/uinput` (for the virtual keyboard the buttons press, as Steam's rule does), and `uinput` is loaded at start-up. The .deb's postinst, the Arch package and the .rpm apply the rule straight away.
+
 ## 5.19.1 — 2026-11-11
 
 - **Updates take effect in sway without a new login.** An update that changes tvwcs.conf (key bindings and window rules) left the running sway on the old copy until the next login, so on a TV left logged in for weeks the volume keys still ran sway's own `pactl +5%` bindings: no volume indicator (5.17.0) and no TVWCS volume limit. When TVWCS starts (an update restarts it) and tvwcs.conf was installed after sway started, it now has sway reload it once.

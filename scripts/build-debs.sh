@@ -32,6 +32,8 @@ install -m 644 "$ROOT/VERSION" "$P/usr/lib/tvwcs/VERSION"
 install -m 755 "$ROOT/package/bin/tvwcs" "$P/usr/bin/tvwcs"
 install -m 755 "$ROOT/data/tvwcs-session" "$P/usr/bin/tvwcs-session"
 install -m 644 "$ROOT/data/tvwcs.conf" "$P/usr/share/tvwcs/tvwcs.conf"
+install -D -m 644 "$ROOT/data/70-tvwcs-cec.rules" "$P/usr/lib/udev/rules.d/70-tvwcs-cec.rules"   # the TV remote over HDMI-CEC (cec.py)
+install -D -m 644 "$ROOT/data/tvwcs-uinput.conf" "$P/usr/lib/modules-load.d/tvwcs-uinput.conf"
 install -m 644 "$ROOT/data/tvwcs-sway.desktop" "$P/usr/share/wayland-sessions/tvwcs-sway.desktop"
 # slick-greeter (Linux Mint's login screen) shows badges/<session file name>.svg next to a session, else a blank disc
 install -m 644 "$ROOT/data/tvwcs-sway-badge.svg" "$P/usr/share/slick-greeter/badges/tvwcs-sway.svg"

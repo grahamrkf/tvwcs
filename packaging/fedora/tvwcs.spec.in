@@ -66,10 +66,22 @@ python3 -m compileall -q -d /usr/lib/tvwcs/tvwcs "$lib/tvwcs"
 install -Dm755 package/bin/tvwcs %{buildroot}/usr/bin/tvwcs
 install -Dm755 data/tvwcs-session %{buildroot}/usr/bin/tvwcs-session
 install -Dm644 data/tvwcs.conf %{buildroot}/usr/share/tvwcs/tvwcs.conf
+install -Dm644 data/70-tvwcs-cec.rules %{buildroot}/usr/lib/udev/rules.d/70-tvwcs-cec.rules
+install -Dm644 data/tvwcs-uinput.conf %{buildroot}/usr/lib/modules-load.d/tvwcs-uinput.conf
 install -Dm644 -t %{buildroot}/usr/share/wayland-sessions data/tvwcs-sway.desktop
 install -Dm644 -t %{buildroot}/usr/share/applications data/com.tvwcs.ControlPanel.desktop
 install -Dm644 -t %{buildroot}/usr/share/icons/hicolor/scalable/apps data/tvwcs.svg data/tvwcs-settings.svg
 cp scripts/retro/FONTS.txt FONTS.txt
+
+%post
+# The udev rule for the TV remote over HDMI-CEC applies now, not only after a restart.
+modprobe uinput 2>/dev/null || true
+if [ -d /run/systemd/system ] && command -v udevadm >/dev/null 2>&1; then
+    udevadm control --reload-rules 2>/dev/null || true
+    udevadm trigger --action=change --subsystem-match=cec 2>/dev/null || true
+    udevadm trigger --action=change --subsystem-match=misc --sysname-match=uinput 2>/dev/null || true
+fi
+exit 0
 
 %preun
 # Only when TVWCS is removed (not upgraded): what its Settings set up outside its own files goes, as the .deb's prerm
@@ -106,6 +118,8 @@ exit 0
 /usr/bin/tvwcs
 /usr/bin/tvwcs-session
 /usr/share/tvwcs/
+/usr/lib/udev/rules.d/70-tvwcs-cec.rules
+/usr/lib/modules-load.d/tvwcs-uinput.conf
 /usr/share/wayland-sessions/tvwcs-sway.desktop
 /usr/share/applications/com.tvwcs.ControlPanel.desktop
 /usr/share/icons/hicolor/scalable/apps/tvwcs.svg
