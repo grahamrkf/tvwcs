@@ -216,6 +216,7 @@ class TVWCSApp(Gtk.Application):
         self.refresh_data(rebuild=False)
         if first:
             self.apply_look(); self._update_layout(False,False,focus_output=False); self.window=TVWCSWindow(self)
+            if self.wm.available and sway_include.reload_if_updated(RUNTIME): print("TVWCS: tvwcs.conf was updated; sway reloaded it",file=sys.stderr)
             self.apply_hotkeys(); self.idle.apply(); self.cursor.apply(); self.volume_guard.apply(); self.watch.start(); GLib.timeout_add(1500,self._run_startup_action)
         self.window.set_visible(False)
     def do_shutdown(self):

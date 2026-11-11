@@ -1,5 +1,5 @@
 """Where plain `tvwcs` runs and TVWCS's include line in the usual sway config, without GTK or sway."""
-import json, tempfile, unittest
+import json, tempfile, unittest, unittest.mock
 from pathlib import Path
 from tvwcs import sway_include as si
 
@@ -51,3 +51,29 @@ class IncludeTests(unittest.TestCase):
         self.assertTrue(si.active({"SWAYSOCK":"x","TVWCS_SESSION":"sway","HOME":str(self.home)},self.no_sway))
 
 if __name__=="__main__": unittest.main()
+
+class ReloadAfterUpdateTests(unittest.TestCase):
+    def test_conf_newer_than_what_sway_read(self):
+        from tvwcs import sway_include as S
+        self.assertTrue(S.conf_is_newer(200,100))           # installed while sway ran
+        self.assertFalse(S.conf_is_newer(50,100))           # sway started after the install: it read it
+        self.assertFalse(S.conf_is_newer(200,100,300))      # TVWCS already had sway reload it
+    def test_it_reloads_once_after_an_update(self):
+        import os, tempfile
+        from pathlib import Path
+        from tvwcs import sway_include as S
+        with tempfile.TemporaryDirectory() as d:
+            sock=Path(d,"sway-ipc.sock"); sock.touch(); conf=Path(d,"tvwcs.conf"); conf.touch()
+            calls=[]
+            class R: returncode=0
+            def run(argv, **k): calls.append(argv); return R()
+            real_stat=os.stat
+            def stat(p,*a,**k):   # sway started at 100, tvwcs.conf installed at 200
+                st=real_stat(p,*a,**k); t=200 if str(p)==str(conf) else 100
+                return os.stat_result((st.st_mode,st.st_ino,st.st_dev,st.st_nlink,st.st_uid,st.st_gid,st.st_size,t,t,t))
+            env={"SWAYSOCK":str(sock)}
+            with unittest.mock.patch("os.stat",stat):
+                self.assertTrue(S.reload_if_updated(d,env,conf=str(conf),run=run,now=250))
+                self.assertFalse(S.reload_if_updated(d,env,conf=str(conf),run=run,now=260))   # already reloaded
+                self.assertFalse(S.reload_if_updated(d,{},conf=str(conf),run=run))             # not under sway
+            self.assertEqual(calls,[["swaymsg","reload"]])

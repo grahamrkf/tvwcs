@@ -1,5 +1,9 @@
 # Changelog
 
+## 5.19.1 — 2026-11-11
+
+- **Updates take effect in sway without a new login.** An update that changes tvwcs.conf (key bindings and window rules) left the running sway on the old copy until the next login, so on a TV left logged in for weeks the volume keys still ran sway's own `pactl +5%` bindings: no volume indicator (5.17.0) and no TVWCS volume limit. When TVWCS starts (an update restarts it) and tvwcs.conf was installed after sway started, it now has sway reload it once.
+
 ## 5.19.0 — 2026-11-11
 
 - **A third theme, Media.** **Settings › Appearance › Theme › Media** is a dark look with rounded corners, like a media server app, and a new **Look** row picks the app it goes with:
