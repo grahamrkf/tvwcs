@@ -7,11 +7,11 @@ A sound card only has outputs for its active profile: a computer whose card is o
 at all until the card is switched to an HDMI profile (and a graphics card's HDMI sound often starts switched off).
 So the outputs of every card's other profiles are listed too, and choosing one switches the card to it."""
 from __future__ import annotations
-import re, sys, time
+import re, subprocess, sys, threading, time
 from dataclasses import dataclass, field
 
 from tvwcs import distro
-from tvwcs.control_cmd import have, key_values, run
+from tvwcs.control_cmd import c_env, have, key_values, run
 
 VOLUME_STEP=5      # percent per press of − / +
 MAX_VOLUME=100     # pactl allows more (amplified, distorting): capped here unless Settings > Sound > Over-amplification is on
@@ -193,9 +193,9 @@ def read_state():
 
 def stepped(volume, step, boost=False):
     """The next volume a − / + press lands on: a multiple of VOLUME_STEP, within 0..100 % (150 % with
-    over-amplification, `boost`). A volume already above that (set by another program) goes down from where it is."""
+    over-amplification, `boost`). A volume already above that (set by another program) comes down to the top."""
     target=(volume//VOLUME_STEP+1)*VOLUME_STEP if step>0 else max(0,volume-1)//VOLUME_STEP*VOLUME_STEP
-    return max(0,min(max(top(boost),volume),target))
+    return max(0,min(top(boost),target))
 
 def set_volume(device, percent, boost=False):
     return run(["pactl",f"set-{device.kind}-volume",device.name,f"{max(0,min(top(boost),int(percent)))}%"],timeout=5)
@@ -210,6 +210,66 @@ def volume_key(step, boost=False):
     volume=parse_volume(current.out,"")[0]
     if volume is None: return current
     return run(["pactl","set-sink-volume","@DEFAULT_SINK@",f"{stepped(volume,step,boost)}%"],timeout=3)
+
+def loud_outputs(text, most):
+    """`pactl list sinks` (C locale) -> the names of the outputs with a channel above `most` %."""
+    found=[]; name=""
+    for line in text.splitlines():
+        if _HEADER.match(line): name=""; continue
+        if not line.startswith("\t") or line.startswith("\t\t"): continue
+        key,_,value=line.strip().partition(":")
+        if key=="Name": name=value.strip()
+        elif key=="Volume" and name and any(int(p)>most for p in _PERCENT.findall(value)): found.append(name)
+    return found
+
+def keep_under_top(boost=False):
+    """Bring every output above the top (100 %, or 150 % with over-amplification) back down to it. Returns their names."""
+    listed=run(["pactl","list","sinks"],timeout=5)
+    if not listed.ok: return []
+    loud=loud_outputs(listed.out,top(boost))
+    for name in loud: run(["pactl","set-sink-volume",name,f"{top(boost)}%"],timeout=5)
+    return loud
+
+_OUTPUT_EVENT=re.compile(r"'(new|change)' on sink #")
+
+class VolumeGuard:
+    """Keeps the volume limit whatever raised the volume: a volume key bound by another config, pavucontrol, an app,
+    `pactl` in a terminal. It follows `pactl subscribe` and brings an output above the top straight back down (run by
+    the launcher; `boost` says whether over-amplification is on now). It restarts `pactl subscribe` when the sound
+    server goes away (PipeWire restarted, say)."""
+    RETRY=5   # seconds before following the sound server again
+    def __init__(self, boost, popen=subprocess.Popen, check=keep_under_top):
+        self.boost=boost; self.popen=popen; self.check=check
+        self.proc=None; self.thread=None; self.stopping=threading.Event()
+    def start(self):
+        """Start following the sound server (once), and look at the volumes now (the setting may have changed)."""
+        if not have("pactl"): return
+        if self.thread is None or not self.thread.is_alive():
+            self.stopping.clear(); self.thread=threading.Thread(target=self._follow,daemon=True); self.thread.start()
+        else: threading.Thread(target=self._check,daemon=True).start()
+    def stop(self):
+        self.stopping.set()
+        proc=self.proc
+        if proc is not None:
+            try: proc.terminate()
+            except OSError: pass
+    def _check(self):
+        try: self.check(bool(self.boost()))
+        except Exception: pass   # the guard must never take the launcher down
+    def _follow(self):
+        while not self.stopping.is_set():
+            self._check()
+            try: self.proc=self.popen(["pactl","subscribe"],stdout=subprocess.PIPE,stderr=subprocess.DEVNULL,stdin=subprocess.DEVNULL,text=True,env=c_env())
+            except OSError: self.stopping.wait(self.RETRY*6); continue
+            try:
+                for line in self.proc.stdout:
+                    if self.stopping.is_set(): break
+                    if _OUTPUT_EVENT.search(line): self._check()
+            finally:
+                try: self.proc.terminate(); self.proc.wait(timeout=2)
+                except (OSError,subprocess.SubprocessError): pass
+                self.proc=None
+            self.stopping.wait(self.RETRY)
 
 def main(args):
     """`tvwcs volume up|down` (no GTK, so a held key keeps up)."""
