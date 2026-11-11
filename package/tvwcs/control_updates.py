@@ -126,11 +126,35 @@ def lists_checked(manager):
         except OSError: pass
     return max(times) if times else None
 
-def reboot_needed(release=None, exists=os.path.exists, dnf=None):
-    """Debian and Ubuntu leave a marker; Fedora keeps the older kernels, so there dnf needs-restarting -r answers (exit 1:
-    restart); elsewhere, an updated kernel removes the running one's modules folder."""
+def _kernel_flavour(release):
+    """A kernel release without its numbers ("6.12.116+deb13-amd64" -> "#+deb#-amd#"), so that a newer kernel of the same
+    kind is told from another kind installed beside it (an -rt or -lts kernel)."""
+    return re.sub(r"\d+","#",release)
+
+def _kernel_key(release): return tuple(int(n) for n in re.findall(r"\d+",release))
+
+def newer_kernel_installed(release=None, listdir=os.listdir, exists=os.path.exists):
+    """A kernel of the same kind as the running one, but newer, is installed: the update only takes effect after a
+    restart. Debian (without reboot-notifier) leaves no marker and keeps the older kernel, so this is how to tell there.
+    A folder in /usr/lib/modules counts only with its kernel image (in /boot or beside the modules), since removing a
+    kernel can leave its folder behind."""
+    release=release or platform.release()
+    kind=_kernel_flavour(release); key=_kernel_key(release)
+    for d in ("/usr/lib/modules","/lib/modules"):
+        try: names=listdir(d)
+        except OSError: continue
+        for n in names:
+            if n!=release and _kernel_flavour(n)==kind and _kernel_key(n)>key \
+               and (exists(f"/boot/vmlinuz-{n}") or exists(f"{d}/{n}/vmlinuz")): return True
+    return False
+
+def reboot_needed(release=None, exists=os.path.exists, dnf=None, listdir=os.listdir):
+    """Debian and Ubuntu leave a marker (Debian only with reboot-notifier or similar); Fedora keeps the older kernels, so
+    there dnf needs-restarting -r answers (exit 1: restart); a newer kernel than the running one is installed (Debian);
+    an updated kernel removed the running one's modules folder (Arch)."""
     release=release or platform.release()
     if exists("/run/reboot-required") or exists("/var/run/reboot-required"): return True
+    if newer_kernel_installed(release,listdir,exists): return True
     if dnf is None:
         from tvwcs import distro
         dnf=distro.is_fedora() and have("dnf")

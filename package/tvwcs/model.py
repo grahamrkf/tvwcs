@@ -281,7 +281,7 @@ class ConfigStore:
             except (KeyError, TypeError, ValueError, AttributeError): continue
         if "channel_digits" not in user:
             # Before 5.12 every channel had three digits: keep enough of them for the channels already set (a config
-            # saved since 5.21 leaves the digits out when they are the default, and then its channels fit them)
+            # saved with vendor-file support leaves the digits out when they are the default, and then its channels fit them)
             top=max((p.channel for p in self.profiles if p.channel is not None),default=0)
             self.settings["channel_digits"]=max(self.settings["channel_digits"],len(str(top)))
         for p in self.profiles:
