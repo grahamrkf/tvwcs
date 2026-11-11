@@ -19,6 +19,8 @@ USAGE="""Usage: tvwcs [COMMAND]
   tvwcs server-mode status       say whether server mode is on, and for whom
   tvwcs start-session [--user=NAME]
                                  start TVWCS for NAME on this computer's screen now (for example over SSH)
+  tvwcs vendor                   show the vendor and system presets TVWCS read (vendor.json,
+                                 defaults.json) and anything in them it skipped
   tvwcs --version                print TVWCS's version
   tvwcs help                     print this
 

@@ -116,9 +116,9 @@ def clean_hotkeys(raw):
     return hk
 
 def defaulted(raw):
-    """The (device, action) slots a saved settings value does not set, so clean_hotkeys gave them their default: the
-    "last" slots in a config from before 5.21. Only for a saved set; with none at all, nothing is reported."""
-    if not isinstance(raw,dict): return []
+    """The (device, action) slots a saved settings value does not set, so they follow their default (or a vendor's
+    preset): every slot when nothing is saved, the "last" slots in a config from before 5.21."""
+    if not isinstance(raw,dict): raw={}
     if any(a in raw for a in ACTIONS) and not any(d in raw for d in DEVICES): raw={"remote":raw}
     return [(d,a) for d in DEVICES for a in DEVICE_ACTIONS[d] if not isinstance((raw.get(d) if isinstance(raw.get(d),dict) else {}).get(a),str)]
 

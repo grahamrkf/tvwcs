@@ -52,7 +52,7 @@ class HotkeyTests(unittest.TestCase):
         self.assertEqual(clean_hotkeys({"keyboard":{"menu":"Mod4+Tab"}})["keyboard"]["last"],"")   # the Quick Menu keeps a key both have
     def test_defaulted_slots(self):
         self.assertEqual(defaulted({"keyboard":{"menu":"Mod4"},"remote":{"menu":"F2","last":""},"gamepad":{"menu":""}}),[("keyboard","last"),("gamepad","last")])
-        self.assertEqual(defaulted(None),[]); self.assertIn(("keyboard","menu"),defaulted({"menu":"F9"}))
+        self.assertEqual(len(defaulted(None)),6); self.assertIn(("keyboard","menu"),defaulted({"menu":"F9"}))
     def test_used_by_finds_the_slot_holding_a_key(self):
         self.assertEqual(used_by(DEFAULT_HOTKEYS,"F2"),("remote","menu")); self.assertIsNone(used_by(DEFAULT_HOTKEYS,"F2",("remote","menu")))
         self.assertIsNone(used_by(DEFAULT_HOTKEYS,"F9"))

@@ -490,17 +490,28 @@ APP_HOTKEY_HINT="Give an app a hotkey with ✎ Edit on it in Applications."
 
 # ====================================================================== TVWCS's own updates (on the Software updates page)
 class _SelfUpdate:
-    """TVWCS updates: a newer release from GitHub, prereleases, and the way back to the latest release."""
+    """TVWCS updates: a newer release from GitHub (or a vendor's release list), prereleases, and the way back to the
+    latest release. Shown only when TVWCS's package turns its updater on (vendor.py): TVWCS packaged by a distribution
+    is updated with the rest of the system."""
     update_text=""; updating=False
     def draw_self_update(self):
+        updates=selfupdate.source()
+        if not selfupdate.self_updates(updates):
+            vendor=ConfigStore().vendor
+            if updates.source=="system":
+                self.section("TVWCS")
+                self.row("TVWCS",f"Version {__version__}",None,ident="opt:update",icon="view-refresh-symbolic",fallback="⟳")
+                self.note(("This copy runs from a source checkout: update it with git pull." if not selfupdate.packaged() else
+                           f"TVWCS is updated with this system's other software{' from '+vendor.name if vendor.name else ''}: Check for updates below installs a new version with the rest."))
+            return
         self.section("TVWCS UPDATES")
         self.row("Check for TVWCS updates",self.update_text or f"Version {__version__}",None if self.updating else self.check_updates,ident="opt:update",
                  icon="view-refresh-symbolic",fallback="⟳")
         if selfupdate.builds_itself():
-            self.note(f"Looks for a newer release of TVWCS on GitHub ({selfupdate.GITHUB_REPO}). This copy was built from TVWCS's "
+            self.note(f"Looks for a newer release of TVWCS on {selfupdate.where(updates)}. This copy was built from TVWCS's "
                       "Arch package: install a new release by running TVWCS's installer again in a terminal (or with makepkg -si, as in docs/INSTALL-ARCH.md).")
             return
-        self.note(f"Looks for a newer release of TVWCS on GitHub ({selfupdate.GITHUB_REPO}) and offers to install it.")
+        self.note(f"Looks for a newer release of TVWCS on {selfupdate.where(updates)} and offers to install it.")
         pre=ConfigStore().settings["update_prereleases"]
         self.row("Include prereleases",_on_off(pre),self.toggle_prereleases,ident="opt:update_prereleases")
         self.note("Every change is released as a prerelease first, and marked as the latest release once it has been tested "
@@ -532,7 +543,7 @@ class _SelfUpdate:
         self.update_text=f"{release.version} available"; self.redraw()
         if selfupdate.builds_itself():
             self.win.notice("TVWCS updates",f"TVWCS {release.version} is available (you have {__version__}). Install it by running TVWCS's "
-                            "installer again in a terminal:\n\ncurl -fsSL https://github.com/grahamrkf/tvwcs/releases/latest/download/install.sh | bash"); return
+                            f"installer again in a terminal:\n\ncurl -fsSL {selfupdate.installer_url()} | bash"); return
         if not selfupdate.packaged():
             self.win.notice("TVWCS updates",f"TVWCS {release.version} is available. This copy runs from a source checkout: update it with git pull."); return
         kind=" prerelease" if release.prerelease else ""

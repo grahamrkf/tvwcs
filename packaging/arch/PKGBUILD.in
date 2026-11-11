@@ -33,6 +33,8 @@ package() {
   install -Dm644 VERSION "$lib/VERSION"
   # Settings' TVWCS updates then says to build the next release's package instead of installing a .deb from GitHub
   echo arch > "$lib/PACKAGE"
+  # TVWCS's own update check, for its GitHub releases (vendor.py)
+  install -Dm644 packaging/common/updates.json "$lib/updates.json"
   # compiled here, so pacman owns the bytecode and removes it with the package
   python -m compileall -q -d /usr/lib/tvwcs/tvwcs "$lib/tvwcs"
 

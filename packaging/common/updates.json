@@ -1,0 +1,4 @@
+{
+  "comment": "TVWCS from its GitHub releases: Settings > Software updates checks them for a newer TVWCS. A vendor.json (docs/VENDORS.md) overrides this.",
+  "updates": {"source": "github", "repo": "grahamrkf/tvwcs"}
+}

@@ -8,6 +8,7 @@ from tvwcs.cec import DEFAULTS as CEC_DEFAULTS, clean_settings as clean_cec
 from tvwcs.hotkeys import ACTION_LABELS, DEFAULT_HOTKEYS, DEVICE_LABELS, assigned, clean_hotkeys, defaulted, valid_spec
 from tvwcs.pinlock import valid_hash
 from tvwcs.power import clean_critical, clean_idle
+from tvwcs import vendor as vendor_presets
 
 CONFIG_HOME=Path(os.environ.get("XDG_CONFIG_HOME",str(Path.home()/".config")))
 DEFAULT_CONFIG=CONFIG_HOME/"tvwcs"/"config.json"
@@ -232,17 +233,35 @@ def _clean_settings(raw) -> dict:
 LEGACY_NAMES_ALL={"com.tvwcs.ControlPanel.desktop":("Control Panel","Settings","TVWCS Settings")}
 LEGACY_NAMES={k:v[0] for k,v in LEGACY_NAMES_ALL.items()}
 
+def _user_hotkeys(raw):
+    """A user's settings with the hotkeys of before 4.0 (one set, {"menu": ..}) made the remote's set, so they merge
+    over a vendor's per-device presets."""
+    if not isinstance(raw,dict): return {}
+    hk=raw.get("hotkeys")
+    if isinstance(hk,dict) and any(a in hk for a in ACTION_LABELS) and not any(d in hk for d in DEVICE_LABELS):
+        raw=dict(raw,hotkeys={"remote":hk})
+    return raw
+
 class ConfigStore:
+    """config.json: the user's launch profiles and settings. The settings start from TVWCS's defaults with the vendor's
+    and administrator's presets over them (vendor.py: base); only what the user changed from that is saved, so the
+    rest keeps following the presets (and TVWCS's own defaults) when they change."""
     def __init__(self, path: Path | str = DEFAULT_CONFIG):
         self.path=Path(path); self.profiles: list[LaunchProfile]=[]; self.settings=copy.deepcopy(DEFAULT_SETTINGS); self.app_descriptions: dict[str,str]={}
-        self.app_names: dict[str,str]={}
+        self.app_names: dict[str,str]={}; self.vendor=vendor_presets.Vendor(); self.base=copy.deepcopy(DEFAULT_SETTINGS)
         self.load()
     def load(self):
-        self.profiles=[]; self.settings=copy.deepcopy(DEFAULT_SETTINGS); self.app_descriptions={}; self.app_names={}
+        self.vendor=vendor_presets.load(report=False)
+        presets=self.vendor.settings
+        if self.vendor.startup_app and not (isinstance(presets.get("startup"),dict) and "mode" in presets["startup"]):
+            presets=vendor_presets.merge(presets,{"startup":{"mode":"app"}})
+        self.base=_clean_settings(presets)
+        self.profiles=[]; self.settings=copy.deepcopy(self.base); self.app_descriptions={}; self.app_names={}
         try: data=json.loads(self.path.read_text(encoding="utf-8"))
-        except (OSError, ValueError, TypeError): return
-        if not isinstance(data,dict): return
-        self.settings=_clean_settings(data.get("settings"))
+        except (OSError, ValueError, TypeError): data={}
+        if not isinstance(data,dict): data={}
+        user=_user_hotkeys(data.get("settings"))
+        self.settings=_clean_settings(vendor_presets.merge(presets,user))
         raw_descriptions=data.get("app_descriptions")
         if isinstance(raw_descriptions,dict):
             self.app_descriptions={str(k):_clean_text(v) for k,v in raw_descriptions.items() if _clean_text(v)}
@@ -260,21 +279,23 @@ class ConfigStore:
                                                   raw["pin_hash"] if valid_hash(raw.get("pin_hash")) else "",raw["pin_scope"] if raw.get("pin_scope") in PIN_SCOPES else PIN_LAUNCH,_clean_text(raw.get("description")),
                                                   raw["hotkey"] if isinstance(raw.get("hotkey"),str) and valid_spec(raw["hotkey"]) else ""))
             except (KeyError, TypeError, ValueError, AttributeError): continue
-        if not (isinstance(data.get("settings"),dict) and "channel_digits" in data["settings"]):
-            # Before 5.12 every channel had three digits: keep enough of them for the channels already set
+        if "channel_digits" not in user:
+            # Before 5.12 every channel had three digits: keep enough of them for the channels already set (a config
+            # saved with vendor-file support leaves the digits out when they are the default, and then its channels fit them)
             top=max((p.channel for p in self.profiles if p.channel is not None),default=0)
-            self.settings["channel_digits"]=max(DEFAULT_CHANNEL_DIGITS,len(str(top)))
+            self.settings["channel_digits"]=max(self.settings["channel_digits"],len(str(top)))
         for p in self.profiles:
             if p.channel is not None and p.channel>self.channel_max(): p.channel=None
-        # A hotkey added since the file was saved (Super+Tab for the last app, 5.21) gives way to an app that has that key
+        # The Last app key (Super+Tab, 5.21) is new: where the user never set it, it gives way to an app that has the key
         taken={p.hotkey for p in self.profiles if p.hotkey}
-        for d,a in defaulted(data["settings"].get("hotkeys") if isinstance(data.get("settings"),dict) else None):
-            if self.settings["hotkeys"][d][a] in taken: self.settings["hotkeys"][d][a]=""
+        for d,a in defaulted(user.get("hotkeys")):
+            if a=="last" and self.settings["hotkeys"][d][a] in taken: self.settings["hotkeys"][d][a]=""
         self._deduplicate_channels(); self._deduplicate_hotkeys()
     def save(self):
         self.path.parent.mkdir(parents=True,exist_ok=True)
         temp=self.path.with_suffix(".json.tmp")
-        temp.write_text(json.dumps({"version":2,"settings":self.settings,"app_descriptions":self.app_descriptions,"app_names":self.app_names,"profiles":[asdict(p) for p in self.profiles]},indent=2,ensure_ascii=False)+"\n",encoding="utf-8")
+        changed=vendor_presets.difference(self.settings,self.base)
+        temp.write_text(json.dumps({"version":2,"settings":changed,"app_descriptions":self.app_descriptions,"app_names":self.app_names,"profiles":[asdict(p) for p in self.profiles]},indent=2,ensure_ascii=False)+"\n",encoding="utf-8")
         os.replace(temp,self.path)
     def ensure_defaults(self, applications):
         """Give every application a launch profile, and keep a plain profile's name in step when the application is
@@ -289,12 +310,29 @@ class ConfigStore:
                         and (p.name==old or p.name in LEGACY_NAMES_ALL.get(app.desktop_id,())):
                     p.name=app.name; changed=True
             if app.desktop_id not in known:
-                self.profiles.append(LaunchProfile(str(uuid.uuid4()),app.desktop_id,app.name)); known.add(app.desktop_id); changed=True
+                profile=LaunchProfile(str(uuid.uuid4()),app.desktop_id,app.name); self._vendor_channel(profile)
+                self.profiles.append(profile); known.add(app.desktop_id); changed=True
             if app.desktop_id in self.app_descriptions:   # before 4.0 an application had one description: its default profile's now
                 main=default_of(self.for_app(app.desktop_id),app.name); text=self.app_descriptions.pop(app.desktop_id); changed=True
                 if main is not None and not main.description: main.description=text
         if self._give_settings_channel_zero(): changed=True
+        if self._vendor_startup_app(): changed=True
         if changed: self.save()
+    def _vendor_channel(self, profile):
+        """A new application's profile gets the vendor's channel and favorite for it (vendor.py "channels"), when the
+        channel is free and fits the channel digits."""
+        preset=self.vendor.channels.get(profile.desktop_id)
+        if not preset: return
+        ch=preset["channel"]
+        if ch is not None and CHANNEL_MIN<=ch<=self.channel_max() and not any(p.channel==ch for p in self.profiles): profile.channel=ch
+        profile.favorite=preset["favorite"]
+    def _vendor_startup_app(self):
+        """The vendor's application to open at login (vendor.py "startup_app"), for a user who has not chosen one."""
+        st=self.settings["startup"]
+        if not self.vendor.startup_app or st["profile_id"]: return False
+        main=next((p for p in self.for_app(self.vendor.startup_app) if not p.command and not p.desktop_action),None)
+        if main is None: return False   # not installed (yet)
+        st["profile_id"]=main.id; return True
     def _give_settings_channel_zero(self):
         """Channel 0 opens Settings: given once (a new install, or the first start after updating to 3.1), to the
         Settings app's main profile, when no other profile has it. The user may change it afterwards."""

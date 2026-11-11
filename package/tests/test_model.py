@@ -119,7 +119,8 @@ class SettingsAndProfileTests(unittest.TestCase):
                                                     "button_hints":True,"quick_close_button":False,"password_keyboard":"digits"}}))
             store=ConfigStore(path); store.save(); saved=json.loads(path.read_text())["settings"]
             for key in ("use","apps_open","reduce_motion","tvwcs_lock_screen","button_hints","quick_close_button","password_keyboard"): self.assertNotIn(key,saved)
-            self.assertEqual(saved["scale"],"")   # the size the old "Used on: A TV" chose: automatic now, by the mode
+            self.assertNotIn("scale",saved)   # the size the old "Used on: A TV" chose: automatic now, by the mode (the default, so not saved)
+            self.assertEqual(ConfigStore(path).settings["scale"],"")
     def test_accent_names_and_key_hints(self):
         self.assertEqual(accent_name("#E81123"),"Red"); self.assertEqual(accent_name("#123456"),"#123456")
         self.assertIn(DEFAULT_SETTINGS["accent"],ACCENT_NAMES); self.assertTrue(MARGIN_RANGE[0]<=DEFAULT_SETTINGS["margin"]<=MARGIN_RANGE[1])
@@ -146,6 +147,11 @@ class SettingsAndProfileTests(unittest.TestCase):
                 "profiles":[{"id":"p1","desktop_id":"kodi.desktop","name":"Kodi","hotkey":"Mod4+Tab"}]}))
             store=ConfigStore(path)   # set by hand on both: the slot keeps it, as before
             self.assertEqual((store.settings["hotkeys"]["keyboard"]["last"],store.get("p1").hotkey),("Mod4+Tab",""))
+            path.write_text(json.dumps({"settings":{},"profiles":[{"id":"p1","desktop_id":"kodi.desktop","name":"Kodi","hotkey":"Mod4+Tab"}]}))
+            store=ConfigStore(path)   # no hotkeys saved (only changed settings are): the app keeps its key
+            self.assertEqual((store.settings["hotkeys"]["keyboard"]["last"],store.get("p1").hotkey),("","Mod4+Tab"))
+            store.save(); store=ConfigStore(path)   # and keeps it after a save
+            self.assertEqual((store.settings["hotkeys"]["keyboard"]["last"],store.get("p1").hotkey),("","Mod4+Tab"))
     def test_defaults_are_not_shared_between_stores(self):
         with tempfile.TemporaryDirectory() as d:
             a=ConfigStore(Path(d)/"a.json"); a.settings["hotkeys"]["remote"]["menu"]="F9"
