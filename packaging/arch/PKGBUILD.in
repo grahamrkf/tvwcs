@@ -39,6 +39,8 @@ package() {
   install -Dm755 package/bin/tvwcs "$pkgdir/usr/bin/tvwcs"
   install -Dm755 data/tvwcs-session "$pkgdir/usr/bin/tvwcs-session"
   install -Dm644 data/tvwcs.conf "$pkgdir/usr/share/tvwcs/tvwcs.conf"
+  install -Dm644 data/70-tvwcs-cec.rules "$pkgdir/usr/lib/udev/rules.d/70-tvwcs-cec.rules"   # the TV remote over HDMI-CEC
+  install -Dm644 data/tvwcs-uinput.conf "$pkgdir/usr/lib/modules-load.d/tvwcs-uinput.conf"
   install -Dm644 -t "$pkgdir/usr/share/wayland-sessions" data/tvwcs-sway.desktop
   install -Dm644 -t "$pkgdir/usr/share/applications" data/com.tvwcs.ControlPanel.desktop
   install -Dm644 -t "$pkgdir/usr/share/icons/hicolor/scalable/apps" data/tvwcs.svg data/tvwcs-settings.svg

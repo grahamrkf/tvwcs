@@ -1,0 +1,5 @@
+# TVWCS: the person using this computer (its active seat) may use its HDMI-CEC ports, so the TV's remote can drive
+# TVWCS, and /dev/uinput, for the virtual keyboard those buttons press (Steam's rules give /dev/uinput the same).
+# The number is under 73, where systemd turns the uaccess tag into access for the logged-in user.
+SUBSYSTEM=="cec", KERNEL=="cec[0-9]*", TAG+="uaccess"
+KERNEL=="uinput", SUBSYSTEM=="misc", TAG+="uaccess", OPTIONS+="static_node=uinput"

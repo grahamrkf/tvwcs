@@ -1,9 +1,24 @@
 # pacman runs these. What TVWCS's Settings set up outside its own files goes when the package is removed (as the .deb's
 # prerm does): without TVWCS's session, an automatic login into it would fail.
 
+# The udev rule for the TV remote over HDMI-CEC applies now, not only after a restart.
+_tvwcs_udev() {
+  modprobe uinput 2>/dev/null || true
+  if [ -d /run/systemd/system ] && command -v udevadm >/dev/null 2>&1; then
+    udevadm control --reload-rules 2>/dev/null || true
+    udevadm trigger --action=change --subsystem-match=cec 2>/dev/null || true
+    udevadm trigger --action=change --subsystem-match=misc --sysname-match=uinput 2>/dev/null || true
+  fi
+}
+
 post_install() {
+  _tvwcs_udev
   echo "TVWCS is installed. Choose the TVWCS session at your login screen, or type tvwcs at a text console."
   echo "Settings > User sets up the automatic login. See /usr/share/doc/tvwcs/INSTALL-ARCH.md."
+}
+
+post_upgrade() {
+  _tvwcs_udev
 }
 
 pre_remove() {

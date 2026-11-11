@@ -10,7 +10,7 @@ from gi.repository import Gdk, GLib, Gtk, Pango
 
 from tvwcs import control_storage as storage
 from tvwcs import control_bluetooth as bluetooth, control_datetime as timedate, control_display as display, control_ssh as ssh, control_network as network, control_sound as sound, control_sysinfo as sysinfo, control_ubuntu as ubuntu, control_updates as updates
-from tvwcs import __version__, distro, features, power, privilege, selfupdate, servermode, sway_include
+from tvwcs import __version__, cec, distro, features, power, privilege, selfupdate, servermode, sway_include
 from tvwcs import ui_control_login as login_ui
 from tvwcs.hotkeys import ACTION_LABELS, DEFAULT_HOTKEYS, DEVICE_ACTIONS, DEVICE_LABELS, DEVICES, describe
 from tvwcs.model import (AUTO_SIZE, CHANNEL_DIGITS, CORNERS, MEDIA_LOOKS, PHOSPHORS, RETRO_FONTS, RETRO_WALLPAPER_LABELS, RETRO_WALLPAPERS, SIZES, STYLES, THEMES, WALLPAPERS, ConfigStore, accent_name, auto_size, channel_range, corner_right, is_4k,
@@ -371,6 +371,7 @@ class HotkeysPage(_ConfigPage):
     """The keys that open the Quick Menu and Applications from a keyboard, a remote or a gamepad (TVWCS writes
     hotkeys.conf when it reads them again), and the apps that have a hotkey of their own."""
     key="hotkeys"; title="Remote and hotkeys"; icon="input-keyboard-symbolic"; fallback="⌨"; sway_only=True
+    refreshable=True    # ⟳ reads the HDMI-CEC status again
     not_added=False     # this is a sway session without TVWCS's include line: the page offers to add it
     def summary(self): return ""
     def read(self):
@@ -387,8 +388,13 @@ class HotkeysPage(_ConfigPage):
         for device in DEVICES:
             for name in DEVICE_ACTIONS[device]:
                 self.row(DEVICE_LABELS[device],describe(st["hotkeys"][device][name]),lambda d=device,n=name:self.change_hotkey(store,d,n),ident=f"key:{device}:{name}")
+        has_cec=cec.present()
+        if has_cec:
+            self.row(CEC_LABEL,cec.button_label(st["cec"]["menu"]) if st["cec"]["enabled"] else "Off",lambda:self.choose_cec_button(store),ident="key:cec:menu")
         self.note("Keyboard: a modifier tapped on its own (such as Super) triggers when it is released, so Super combinations keep working. "
-                  "Remote: most remotes send ordinary keys; F2 suits many of them. Gamepad: a mapper such as AntiMicroX turns its buttons into keys.")
+                  "Remote: most remotes send ordinary keys; F2 suits many of them. Gamepad: a mapper such as AntiMicroX turns its buttons into keys."
+                  +(" TV remote: a button of the TV's own remote, sent over HDMI-CEC." if has_cec else ""))
+        if has_cec: self.draw_cec(st["cec"])
         self.section("APPLICATION HOTKEYS")
         profiles=store.hotkey_profiles()
         if not profiles: self.note("No application has a hotkey. "+APP_HOTKEY_HINT)
@@ -397,7 +403,36 @@ class HotkeysPage(_ConfigPage):
             self.row(p.name,describe(p.hotkey),lambda pid=p.id,name=p.name:self.change_app_hotkey(store,pid,name),ident=f"key:app:{p.id}",extras=[remove])
         if profiles: self.note(APP_HOTKEY_HINT)
         self.row("Reset all hotkeys","Defaults",self.reset_hotkeys,ident="key:reset",
-                 detail="Keyboard: tap Super. Remote: F2. Gamepad: none. Removes every application hotkey")
+                 detail="Keyboard: tap Super. Remote: F2. Gamepad: none."+(f" TV remote: {cec.button_label(cec.DEFAULT_MENU_BUTTON)}." if has_cec else "")
+                        +" Removes every application hotkey")
+
+    def draw_cec(self, opts):
+        """The TV's remote over HDMI-CEC (cec.py): shown only on a computer with a CEC port (a Raspberry Pi 4 or 5, or a
+        USB adapter such as Pulse-Eight's)."""
+        self.section("TV REMOTE (HDMI-CEC)")
+        self.row("Use the TV's remote",_on_off(opts["enabled"]),lambda:self.cec_toggle("enabled"),ident="cec:enabled")
+        self.note("The TV lists this computer as \"TVWCS\" and passes its remote's buttons on: the arrows move, OK selects, Back "
+                  "goes back, and the numbers, play and pause work in apps too. Turn it off if an app such as Kodi uses HDMI-CEC itself.")
+        if not opts["enabled"]: return
+        status=cec.read_status(runtime_dir())
+        seen=f"Last button: {status.last_button}" if status is not None and status.last_button else "Press a button on the TV's remote to check it arrives"
+        self.row(cec.describe(status),"",None,detail=seen,icon="video-display-symbolic",fallback="▭",ident="cec:status")
+        self.row("Switch the TV to this computer",_on_off(opts["wake_tv"]),lambda:self.cec_toggle("wake_tv"),ident="cec:wake_tv")
+        self.note("When TVWCS starts and when the computer wakes, the TV turns on and changes to this input.")
+        self.row("Turn the TV off with the computer",_on_off(opts["tv_standby"]),lambda:self.cec_toggle("tv_standby"),ident="cec:tv_standby")
+        self.note("When the computer sleeps or shuts down, the TV goes to standby too.")
+        self.row("Sleep when the TV turns off",_on_off(opts["follow_tv"]),lambda:self.cec_toggle("follow_tv"),ident="cec:follow_tv")
+        self.note("Turning the TV off with its remote puts this computer to sleep.")
+        self.note("Which buttons reach TVWCS depends on the TV: most pass on the arrows, OK, Back and the numbers, fewer the colour "
+                  "buttons or Home. The TV's own setting may be called Anynet+ (Samsung), SimpLink (LG), Bravia Sync (Sony) or CEC.")
+    def cec_toggle(self, key):
+        self.change(lambda s:s.settings["cec"].update({key:not s.settings["cec"][key]}))
+    def choose_cec_button(self, store):
+        status=cec.read_status(runtime_dir()); seen=set(status.seen) if status is not None else set()
+        options=[(b.id,b.label+("  (your TV sends it)" if b.id in seen else "")) for b in cec.HOTKEY_CHOICES]+[("","None")]
+        def chosen(button_id):
+            self.change(lambda s:s.settings["cec"].update(menu=button_id,enabled=True))
+        self.win.choose_option(f"{CEC_LABEL}: {ACTION_LABELS['menu']}",options,store.settings["cec"]["menu"] if store.settings["cec"]["enabled"] else None,chosen)
 
     def change_hotkey(self, store, device, name):
         label=f"{DEVICE_LABELS[device]}: {ACTION_LABELS[name]}"
@@ -432,10 +467,12 @@ class HotkeysPage(_ConfigPage):
             for device in DEVICES:
                 for name in DEVICE_ACTIONS[device]: s.set_slot_hotkey(device,name,DEFAULT_HOTKEYS[device][name])
             for p in s.hotkey_profiles(): s.set_profile_hotkey(p.id,"")
+            s.settings["cec"]["menu"]=cec.DEFAULT_MENU_BUTTON
         n=len(ConfigStore().hotkey_profiles())
         self.win.confirm("Reset all hotkeys?","The Quick Menu hotkeys go back to their defaults"+(f", and the {n} application hotkey{'s' if n!=1 else ''} are removed." if n else "."),
                          "Reset",lambda:self.change(edit))
 
+CEC_LABEL="TV remote (HDMI-CEC)"
 APP_HOTKEY_HINT="Give an app a hotkey with ✎ Edit on it in Applications."
 
 # ====================================================================== TVWCS's own updates (on the Software updates page)

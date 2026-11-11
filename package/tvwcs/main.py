@@ -76,6 +76,26 @@ class VolumeWatcher:
     def apply(self): self.guard.start()
     def stop(self): self.guard.stop()
 
+class CecWatcher:
+    """The TV's remote over HDMI-CEC (cec.py), when this computer has a CEC port and it is on in Settings."""
+    def __init__(self, app):
+        self.app=app; self.service=None
+    def apply(self):
+        from tvwcs import cec
+        options=self.app.store.settings["cec"]
+        if not options["enabled"] or not cec.present():
+            if self.service is not None: self.service.stop(release=True); self.service=None
+            return
+        if self.service is not None: self.service.update(options); return
+        self.service=cec.CecService(RUNTIME,self._hotkey,self._tv_off)
+        if not self.service.start(options): self.service=None
+    def _hotkey(self, action):
+        if action=="menu": self.app.show_mode("toggle")
+    def _tv_off(self):
+        print("TVWCS: the TV turned off; sleeping (Settings > Remote and hotkeys)",file=sys.stderr); self.app.run_system_action("sleep")
+    def stop(self):
+        if self.service is not None: self.service.stop(); self.service=None
+
 class StatusWatcher:
     """Keeps the bottom of the Quick Menu current (the clock, and the network, volume, Bluetooth and updates icons) and
     does TV mode's housekeeping: the bar stays hidden, and the Quick Menu comes back once no application is open.
@@ -173,7 +193,7 @@ class TVWCSApp(Gtk.Application):
         self.pin_gate=PinGate(); self.owners=WindowOwners()
         self._fullscreen=set()   # windows that were fullscreen when TVWCS was shown; they are made fullscreen again when it hides
         self._behind=None        # the app the Quick Menu was shown over, to go back to when Settings closes (return_focus.py)
-        self.idle=IdleWatcher(self); self.cursor=CursorWatcher(self); self.volume_guard=VolumeWatcher(self)
+        self.idle=IdleWatcher(self); self.cursor=CursorWatcher(self); self.volume_guard=VolumeWatcher(self); self.cec=CecWatcher(self)
         self.status=quick_status.Status(); self.watch=StatusWatcher(self)
         # TV mode: the start-up action may be about to open an app (it runs 1.5 s after start)
         self.grace_until=time.monotonic()+(10 if self.store.settings["startup"]["mode"] in ("app","last") else 0)
@@ -217,10 +237,10 @@ class TVWCSApp(Gtk.Application):
         if first:
             self.apply_look(); self._update_layout(False,False,focus_output=False); self.window=TVWCSWindow(self)
             if self.wm.available and sway_include.reload_if_updated(RUNTIME): print("TVWCS: tvwcs.conf was updated; sway reloaded it",file=sys.stderr)
-            self.apply_hotkeys(); self.idle.apply(); self.cursor.apply(); self.volume_guard.apply(); self.watch.start(); GLib.timeout_add(1500,self._run_startup_action)
+            self.apply_hotkeys(); self.idle.apply(); self.cursor.apply(); self.volume_guard.apply(); self.cec.apply(); self.watch.start(); GLib.timeout_add(1500,self._run_startup_action)
         self.window.set_visible(False)
     def do_shutdown(self):
-        self.idle.stop(); self.cursor.stop(); self.volume_guard.stop(); self.watch.stop(); self._release_pid(); Gtk.Application.do_shutdown(self)
+        self.idle.stop(); self.cursor.stop(); self.volume_guard.stop(); self.cec.stop(); self.watch.stop(); self._release_pid(); Gtk.Application.do_shutdown(self)
     def _claim_pid(self):
         try:
             PID_FILE.parent.mkdir(parents=True,exist_ok=True)
@@ -708,7 +728,7 @@ class TVWCSApp(Gtk.Application):
         and the hotkeys. Profiles are read again too, so nothing TVWCS saves afterwards undoes the change."""
         old=scale_key(self.store.settings); look=self._look(); corner=self.store.settings["quick_corner"]
         self.store.load(); self.store.ensure_defaults(self.catalogue.applications)
-        self.apply_hotkeys(); self.idle.apply(); self.cursor.apply(); self.volume_guard.apply(); self.watch.apply_bar(); self.watch.updates_changed()
+        self.apply_hotkeys(); self.idle.apply(); self.cursor.apply(); self.volume_guard.apply(); self.cec.apply(); self.watch.apply_bar(); self.watch.updates_changed()
         if self._look()!=look: self.apply_look()
         if self.window is None: return
         if scale_key(self.store.settings)!=old: set_scale(self.scale_factor)
