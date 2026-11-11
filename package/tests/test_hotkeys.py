@@ -1,5 +1,5 @@
 import unittest
-from tvwcs.hotkeys import DEFAULT_HOTKEYS, HotkeyCapture, binding, clean_hotkeys, describe, is_modifier_only, normalize_spec, render_bindings, used_by, valid_spec
+from tvwcs.hotkeys import DEFAULT_HOTKEYS, HotkeyCapture, binding, clean_hotkeys, defaulted, describe, is_modifier_only, normalize_spec, render_bindings, used_by, valid_spec
 
 class HotkeyTests(unittest.TestCase):
     def test_validation(self):
@@ -16,7 +16,8 @@ class HotkeyTests(unittest.TestCase):
         conf=render_bindings(hk,"/opt/t v/tvwcs")
         self.assertIn("bindcode --release 133 exec --no-startup-id '/opt/t v/tvwcs' toggle",conf)
         self.assertIn("bindsym F2 exec --no-startup-id '/opt/t v/tvwcs' toggle",conf)
-        self.assertEqual(conf.count("exec"),2)   # unset keys (remote Applications and Fullscreen, keyboard Applications, gamepad) bind nothing
+        self.assertIn("bindsym Mod4+Tab exec --no-startup-id '/opt/t v/tvwcs' last-app",conf)
+        self.assertEqual(conf.count("exec"),3)   # unset keys (the remote's and gamepad's Last app, the gamepad's Quick Menu) bind nothing
         self.assertNotIn("bindsym Mod4 ",conf)   # binding Super itself would steal Super+Enter etc.
         for line in conf.splitlines():   # sway has no end-of-line comments; one would become arguments to tvwcs
             if line.startswith("bind"): self.assertNotIn("#",line)
@@ -35,15 +36,23 @@ class HotkeyTests(unittest.TestCase):
         # GTK names a remote's multimedia keys without XF86; sway rejects them that way
         self.assertEqual(binding("Mail"),"bindsym XF86Mail"); self.assertEqual(binding("Shift+Search"),"bindsym Shift+XF86Search")
         self.assertEqual(binding("XF86Tools"),"bindsym XF86Tools"); self.assertEqual(binding("F2"),"bindsym F2")
-    def test_only_the_quick_menu_has_device_hotkeys(self):
+    def test_only_the_quick_menu_and_last_app_have_device_hotkeys(self):
         hk=clean_hotkeys({"remote":{"menu":"F2","fullscreen":"F11","guide":"F3"}})   # the Applications and Fullscreen keys before 4.0
-        self.assertEqual(hk["remote"],{"menu":"F2"}); conf=render_bindings(hk,"t")
+        self.assertEqual(hk["remote"],{"menu":"F2","last":""}); conf=render_bindings(hk,"t")
         self.assertNotIn("F11",conf); self.assertNotIn("F3",conf)
     def test_application_hotkeys_launch_their_profile(self):
         conf=render_bindings(clean_hotkeys(None),"/opt/tvwcs",app_keys=[("Mod4+f","3f2a-b1","Fire\nfox"),("F2","x","Taken"),("F9","bad id","Odd"),("F7","ok","")])
         self.assertIn("bindsym Mod4+f exec --no-startup-id /opt/tvwcs launch 3f2a-b1",conf); self.assertIn("# Application: Fire fox (Super + F)",conf)
         self.assertEqual(conf.count("bindsym F2 "),1)   # the remote's Quick Menu keeps it
         self.assertNotIn("bad id",conf); self.assertIn("launch ok",conf)
+    def test_a_remote_key_for_the_last_app(self):
+        hk=clean_hotkeys({"keyboard":{"menu":"Mod4","last":""},"remote":{"menu":"F2","last":"Red"}})
+        conf=render_bindings(hk,"t")
+        self.assertIn("# Remote: Last app (Red)\nbindsym XF86Red exec --no-startup-id t last-app",conf); self.assertNotIn("Tab",conf)
+        self.assertEqual(clean_hotkeys({"keyboard":{"menu":"Mod4+Tab"}})["keyboard"]["last"],"")   # the Quick Menu keeps a key both have
+    def test_defaulted_slots(self):
+        self.assertEqual(defaulted({"keyboard":{"menu":"Mod4"},"remote":{"menu":"F2","last":""},"gamepad":{"menu":""}}),[("keyboard","last"),("gamepad","last")])
+        self.assertEqual(len(defaulted(None)),6); self.assertIn(("keyboard","menu"),defaulted({"menu":"F9"}))
     def test_used_by_finds_the_slot_holding_a_key(self):
         self.assertEqual(used_by(DEFAULT_HOTKEYS,"F2"),("remote","menu")); self.assertIsNone(used_by(DEFAULT_HOTKEYS,"F2",("remote","menu")))
         self.assertIsNone(used_by(DEFAULT_HOTKEYS,"F9"))

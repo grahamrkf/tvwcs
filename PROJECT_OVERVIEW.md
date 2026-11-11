@@ -31,7 +31,7 @@ The look follows Metro (Modern UI): flat and typographic. The Retro theme swaps 
 
 **Where apps open** (`apps_open`): full screen one per workspace (the TV default), side by side (the desktop default), or as each profile says. Nothing is moved, closed or minimized; other workspaces just aren't shown. TVWCS focuses an existing window rather than starting a second copy when it can match one by class, instance, `StartupWMClass` and name, which is best-effort. sway stays in charge of windows; TVWCS only sends it commands.
 
-**Hotkeys** (`hotkeys.py`) are written to `~/.config/tvwcs/hotkeys.conf`, which `tvwcs.conf` includes. A modifier tapped alone (Super) is bound by keycode on release, so Super combinations keep working. Remote media keys are written with their `XF86` names.
+**Hotkeys** (`hotkeys.py`) are written to `~/.config/tvwcs/hotkeys.conf`, which `tvwcs.conf` includes. A modifier tapped alone (Super) is bound by keycode on release, so Super combinations keep working. Each device has a Quick Menu key and a Last app key (`tvwcs last-app`, Super+Tab by default): sway keeps no focus history, so `last_app.py` follows its window events (`swaymsg -t subscribe`) and falls back on the tree's `focus` lists for windows focused before TVWCS started. Remote media keys are written with their `XF86` names.
 
 **Power and locking.** Power actions use `systemctl`. When polkit refuses, TVWCS uses a no-password sudo or doas rule if there is one, else asks for the sudo password in its own dialog and passes it to `sudo -S` without storing it. Idle times (screen off, lock, sleep, and a second set on battery) go to `swayidle`, whose timeouts call `tvwcs idle <action>` back; sound playing or an inhibiting app keeps the computer awake. The lock screen (`lockscreen.py`, TV mode only) is swaylock with an SVG made at lock time from the theme. A desktop session's lock screen is never changed.
 
@@ -75,7 +75,7 @@ Logic modules have no GTK dependency and are tested without a display.
 | Area | Modules |
 |---|---|
 | Core | `model` (profiles, settings, layout, search), `applications` (discovery, window matching), `workspaces`, `ownership`, `profile_draft`, `pinlock`, `hotkeys` |
-| System | `window_manager` (sway IPC), `cec` (the TV remote over HDMI-CEC: kernel ioctls, a uinput keyboard, TV power), `return_focus`, `system_actions`, `privilege`, `power`, `lockscreen`, `cursor`, `features`, `session`, `tv_mode`, `quick_status`, `selfupdate`, `loginscreen`, `account`, `servermode`, `sway_include`, `distro`, `appearance`, `usage` |
+| System | `window_manager` (sway IPC), `last_app` (focus history for the Last app key), `cec` (the TV remote over HDMI-CEC: kernel ioctls, a uinput keyboard, TV power), `return_focus`, `system_actions`, `privilege`, `power`, `lockscreen`, `cursor`, `features`, `session`, `tv_mode`, `quick_status`, `selfupdate`, `loginscreen`, `account`, `servermode`, `sway_include`, `distro`, `appearance`, `usage` |
 | Settings back ends | `control_cmd`, `control_sound`, `control_display`, `control_bluetooth`, `control_network`, `control_iwd`, `control_datetime`, `control_storage`, `control_updates`, `control_ubuntu`, `control_ssh`, `control_sysinfo` |
 | GTK interface | `main` (app, CLI), `ui_window` (Quick Menu, Applications, dialogs, on-screen keyboard), `ui_editors` (profile editor), `ui_margin`, `ui_control`, `ui_control_pages` and `ui_control_login` (Settings), `widgets`, `theme`, `retro` |
 

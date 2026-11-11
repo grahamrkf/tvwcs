@@ -31,6 +31,7 @@ Used by TVWCS's sway config, hotkeys and idle timer (not usually typed):
   tvwcs toggle | guide           show or hide the Quick Menu, or open the applications guide
   tvwcs reload | stop            reload TVWCS's settings, or quit TVWCS
   tvwcs launch PROFILE_ID        start an application profile (its hotkey)
+  tvwcs last-app                 switch to the app used before the one in use (Super+Tab)
   tvwcs volume up|down|mute      the volume keys: one step, stopping at 100 % (150 % with
                                  Settings > Sound > Allow over-amplification), or mute; each shows
                                  the volume on screen for a moment

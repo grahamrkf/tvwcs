@@ -13,7 +13,7 @@ from tvwcs.hotkeys import MODIFIER_KEYSYMS, render_bindings
 from tvwcs.model import CONFIG_HOME, SETTINGS_DESKTOP_ID, default_of, display_name, effective_scale, LAUNCH_NEW_WORKSPACE, LAUNCH_PLAIN, PIN_LAUNCH_AND_SHOW, ConfigStore, compute_layout, corner_top, dark_look, wallpaper_of, is_4k, scale_key, tv_mode as in_tv_mode
 from tvwcs.ownership import WindowOwners
 from tvwcs.pinlock import PinGate
-from tvwcs import appearance, control_sound, cursor, power, privilege, quick_status, return_focus, sway_include, tv_mode
+from tvwcs import appearance, control_sound, cursor, last_app, power, privilege, quick_status, return_focus, sway_include, tv_mode
 from tvwcs.session import first_time_this_login, is_tvwcs_process, runtime_dir
 from tvwcs.system_actions import POWER_VERBS, SYSTEM_ACTIONS, allowed, command_for, unavailable_message
 from tvwcs.ui_editors import ProfileEditor
@@ -91,6 +91,7 @@ class CecWatcher:
         if not self.service.start(options): self.service=None
     def _hotkey(self, action):
         if action=="menu": self.app.show_mode("toggle")
+        elif action=="last": self.app.switch_to_last_app()
     def _tv_off(self):
         print("TVWCS: the TV turned off; sleeping (Settings > Remote and hotkeys)",file=sys.stderr); self.app.run_system_action("sleep")
     def stop(self):
@@ -195,6 +196,7 @@ class TVWCSApp(Gtk.Application):
         self._behind=None        # the app the Quick Menu was shown over, to go back to when Settings closes (return_focus.py)
         self.idle=IdleWatcher(self); self.cursor=CursorWatcher(self); self.volume_guard=VolumeWatcher(self); self.cec=CecWatcher(self)
         self.status=quick_status.Status(); self.watch=StatusWatcher(self)
+        self.focus_history=last_app.FocusHistory(); self.focus_follower=last_app.FocusFollower(self.focus_history)   # for the Last app hotkeys
         # TV mode: the start-up action may be about to open an app (it runs 1.5 s after start)
         self.grace_until=time.monotonic()+(10 if self.store.settings["startup"]["mode"] in ("app","last") else 0)
 
@@ -242,10 +244,10 @@ class TVWCSApp(Gtk.Application):
             self.apply_look(); self._update_layout(False,False,focus_output=False); self.window=TVWCSWindow(self)
             if self.wm.available and sway_include.reload_if_updated(RUNTIME):
                 print("TVWCS: tvwcs.conf was updated; sway reloaded it",file=sys.stderr); self._sway_reloaded()
-            self.apply_hotkeys(); self.idle.apply(); self.cursor.apply(); self.volume_guard.apply(); self.cec.apply(); self.watch.start(); GLib.timeout_add(1500,self._run_startup_action)
+            self.apply_hotkeys(); self.idle.apply(); self.cursor.apply(); self.volume_guard.apply(); self.cec.apply(); self.focus_follower.start(); self.watch.start(); GLib.timeout_add(1500,self._run_startup_action)
         self.window.set_visible(False)
     def do_shutdown(self):
-        self.idle.stop(); self.cursor.stop(); self.volume_guard.stop(); self.cec.stop(); self.watch.stop(); self._release_pid(); Gtk.Application.do_shutdown(self)
+        self.idle.stop(); self.cursor.stop(); self.volume_guard.stop(); self.cec.stop(); self.focus_follower.stop(); self.watch.stop(); self._release_pid(); Gtk.Application.do_shutdown(self)
     def _claim_pid(self):
         try:
             PID_FILE.parent.mkdir(parents=True,exist_ok=True)
@@ -726,6 +728,7 @@ class TVWCSApp(Gtk.Application):
         for line in lines:
             parts=line.split()
             if len(parts)==2 and parts[0]=="launch": self.launch_by_hotkey(parts[1])
+            elif parts==["last-app"]: self.switch_to_last_app()
             elif parts==["reload"]: self.reload_options()
             elif parts==["status"]: self.watch.updates_changed()
             elif parts[:1]==["restart"]: self.restart(Path(line.split(" ",1)[1].strip()) if len(parts)>1 else None)
@@ -764,6 +767,23 @@ class TVWCSApp(Gtk.Application):
         else: self.wm.prepare_for_launch(mode)
         try: subprocess.Popen([str(LAUNCHER),"settings",*([page] if page else [])],start_new_session=True,stdin=subprocess.DEVNULL)
         except OSError as exc: self.notify_message(f"Could not open Settings: {exc}")
+    def switch_to_last_app(self):
+        """The Last app hotkey (Super+Tab, a remote's key, the TV remote's Previous channel): bring up the app that was in
+        use before the one in use now (last_app.py); pressed again, it goes back. Over the Quick Menu the app it shows
+        over is the one in use; over an empty screen, the app used last comes back."""
+        if not self.wm.available or self.window is None: return
+        windows=self.wm.windows()
+        if self.window.is_visible():
+            behind=self._behind   # Settings is "settings" there
+            if behind=="settings": current=next((int(w["con_id"]) for w in windows if return_focus.is_settings(w)),None)
+            else: current=behind["con_id"] if isinstance(behind,dict) else None
+        else: current=next((int(w["con_id"]) for w in windows if w.get("focused")),None)
+        target=last_app.pick(self.focus_history.ids(),windows,current,last_app.tree_order(self.wm._tree() or {}))
+        if target is None:   # the Quick Menu instead, to pick one
+            if not self.window.is_visible(): self.show_mode("toggle")
+            self.window.show_message("No other app is open. Choose one in the Quick Menu.",title="Nothing to switch to"); return
+        if self._show_lock(target) and not self.window.is_visible(): self.show_mode("toggle")   # the PIN keypad is drawn in the window
+        self.focus_window(target["con_id"])
     def launch_by_hotkey(self,profile_id):
         profile=self.store.get(profile_id)
         if profile is None: self.apply_hotkeys(); return   # deleted since the hotkeys were written
@@ -818,6 +838,7 @@ def main():
     if args in (["--version"],["version"]): from tvwcs import __version__; print(f"TVWCS {__version__}"); return 0
     if args==["stop"]: return send_signal(signal.SIGTERM)
     if args==["reload"]: return send_request("reload")
+    if args==["last-app"]: return send_request("last-app")
     if args in (["lock"],["lock","--nofork"],["lock-at-start"]):   # TVWCS's lock screen (the launcher starts it without GTK, see lockscreen.main)
         from tvwcs.lockscreen import main as lockscreen_main
         return lockscreen_main(args)

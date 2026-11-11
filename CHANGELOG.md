@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- **Switch to the app used last with Super+Tab.** Like a TV remote's previous channel button: **Super+Tab** brings back the app you used before the one on screen (in TV mode its workspace, full screen as it was), and pressing it again goes back, so it flips between two apps. Over the Quick Menu it switches from the app the menu is shown over; with no other app open it says so in the Quick Menu.
+  - **Settings › Remote and hotkeys** has a new **Last app hotkeys** section: a key for the keyboard (Super+Tab), the remote and the gamepad (none until you choose one), and on a computer with an HDMI-CEC port the TV remote's button (**Previous channel**, often labelled PRE-CH, Recall or Last). **Reset all hotkeys** sets them back too.
+  - An app that already had Super+Tab as its own hotkey keeps it, and the keyboard's Last app key starts unset.
+  - `tvwcs last-app` does the same from a script or a key binding of your own. TVWCS follows sway's window events to know the order apps were used in (`last_app.py`).
 - **Vendor files for systems that ship TVWCS.** A distribution or a ready-made TV image can put a `/usr/share/tvwcs/vendor.json` in its own package, and an administrator can add `/etc/tvwcs/defaults.json`, to set:
   - **where TVWCS's updates come from:** the system's own package repository (`"system"`), a fork's GitHub releases, a release list on the vendor's site, or nowhere;
   - **the defaults users start from:** any setting (theme, hotkeys, idle times, and so on), starter channels and favorites for the vendor's apps, and the app to open at login;

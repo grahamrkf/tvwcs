@@ -5,7 +5,7 @@ from dataclasses import dataclass, asdict
 from pathlib import Path
 
 from tvwcs.cec import DEFAULTS as CEC_DEFAULTS, clean_settings as clean_cec
-from tvwcs.hotkeys import ACTION_LABELS, DEFAULT_HOTKEYS, DEVICE_LABELS, assigned, clean_hotkeys, valid_spec
+from tvwcs.hotkeys import ACTION_LABELS, DEFAULT_HOTKEYS, DEVICE_LABELS, assigned, clean_hotkeys, defaulted, valid_spec
 from tvwcs.pinlock import valid_hash
 from tvwcs.power import clean_critical, clean_idle
 from tvwcs import vendor as vendor_presets
@@ -286,6 +286,10 @@ class ConfigStore:
             self.settings["channel_digits"]=max(self.settings["channel_digits"],len(str(top)))
         for p in self.profiles:
             if p.channel is not None and p.channel>self.channel_max(): p.channel=None
+        # The Last app key (Super+Tab, 5.21) is new: where the user never set it, it gives way to an app that has the key
+        taken={p.hotkey for p in self.profiles if p.hotkey}
+        for d,a in defaulted(user.get("hotkeys")):
+            if a=="last" and self.settings["hotkeys"][d][a] in taken: self.settings["hotkeys"][d][a]=""
         self._deduplicate_channels(); self._deduplicate_hotkeys()
     def save(self):
         self.path.parent.mkdir(parents=True,exist_ok=True)

@@ -4,7 +4,8 @@ Linux shows an HDMI port that can talk CEC (a Raspberry Pi 4 or 5's, or a USB ad
 /dev/cecN. TVWCS claims a playback device address on it, named "TVWCS", so the TV lists it as a source and forwards
 its remote's buttons (CEC "User Control Pressed"). Each button becomes an ordinary key press on a virtual keyboard
 (/dev/uinput): OK is Enter, Exit or Return is Esc, the arrows, numbers and play/pause keys are themselves. The button
-chosen in Settings > Remote and hotkeys opens the Quick Menu instead. TVWCS also switches the TV to itself when it
+chosen in Settings > Remote and hotkeys opens the Quick Menu instead, and the one chosen for the last app (Previous
+channel by default) switches back to the app used before. TVWCS also switches the TV to itself when it
 starts or wakes, turns the TV off when the computer sleeps or shuts down, and can put the computer to sleep when the
 TV turns off.
 
@@ -125,17 +126,21 @@ _FIRST=("red","green","yellow","blue","root_menu","info","guide","setup_menu","c
         "previous_channel","data")   # the buttons a TV most often passes on that do nothing else, first
 HOTKEY_CHOICES=tuple(BY_ID[i] for i in _FIRST)+tuple(b for b in BUTTONS if b.id not in NAVIGATION and not b.id.startswith("digit_") and b.id not in _FIRST)
 DEFAULT_MENU_BUTTON="red"
+DEFAULT_LAST_BUTTON="previous_channel"   # a TV's "last channel" button goes back to the app used last
 REPEAT_GAP=0.6   # s: a TV sends User Control Pressed again about every 0.5 s while a button is held
 
-DEFAULTS={"enabled":True,"wake_tv":True,"tv_standby":True,"follow_tv":False,"menu":DEFAULT_MENU_BUTTON}
+DEFAULTS={"enabled":True,"wake_tv":True,"tv_standby":True,"follow_tv":False,"menu":DEFAULT_MENU_BUTTON,"last":DEFAULT_LAST_BUTTON}
+HOTKEY_ACTIONS=("menu","last")   # the Quick Menu, the app used last (last_app.py)
 def clean_settings(raw):
     """Settings > Remote and hotkeys' CEC options from config.json."""
     s=dict(DEFAULTS)
     if not isinstance(raw,dict): return s
     for k in ("enabled","wake_tv","tv_standby","follow_tv"):
         if isinstance(raw.get(k),bool): s[k]=raw[k]
-    menu=raw.get("menu")
-    if menu=="" or (isinstance(menu,str) and menu in BY_ID and menu not in NAVIGATION and not menu.startswith("digit_")): s["menu"]=menu
+    for action in HOTKEY_ACTIONS:
+        button=raw.get(action)
+        if button=="" or (isinstance(button,str) and button in BY_ID and button not in NAVIGATION and not button.startswith("digit_")): s[action]=button
+    if s["last"] and s["last"]==s["menu"]: s["last"]=""   # a button does one thing: the Quick Menu keeps it
     return s
 
 def button_label(button_id):
@@ -151,15 +156,15 @@ def present(pattern=DEVICE_GLOB, globber=glob.glob): return bool(adapters(patter
 class Actions:
     send: list = field(default_factory=list)     # messages to transmit
     keys: list = field(default_factory=list)     # key codes to tap
-    hotkey: str = ""                             # "menu": open the Quick Menu
+    hotkey: str = ""                             # "menu": open the Quick Menu; "last": switch to the app used last
     tv_off: bool = False                         # the TV went to standby
     button: str = ""                             # the button pressed, for Settings
 
 class CecLogic:
     """One claimed playback device: what to answer and do for each message from the bus."""
-    def __init__(self, menu_button=DEFAULT_MENU_BUTTON, clock=time.monotonic):
+    def __init__(self, menu_button=DEFAULT_MENU_BUTTON, clock=time.monotonic, last_button=DEFAULT_LAST_BUTTON):
         self.la=LOG_ADDR_UNREGISTERED; self.pa=PHYS_ADDR_INVALID; self.active=False
-        self.menu_button=menu_button; self.clock=clock
+        self.menu_button=menu_button; self.last_button=last_button; self.clock=clock
         self._held=None; self._held_at=0.0
     @property
     def ready(self): return self.la not in (LOG_ADDR_UNREGISTERED,None) and self.pa!=PHYS_ADDR_INVALID
@@ -214,6 +219,8 @@ class CecLogic:
         a.button=b.id
         if self.menu_button and b.id==self.menu_button:
             if not repeat: a.hotkey="menu"   # held down, it would open and close the menu over and over
+        elif self.last_button and b.id==self.last_button:
+            if not repeat: a.hotkey="last"
         elif b.key is not None: a.keys.append(b.key)   # held down, it repeats, as a held key would
 
 # ---------------------------------------------------------------------- the kernel device
@@ -340,7 +347,8 @@ def describe(status):
 
 # ---------------------------------------------------------------------- the service
 class CecService:
-    """Runs inside TVWCS (main.CecWatcher), on its GLib main loop. `on_hotkey(action)` opens the Quick Menu;
+    """Runs inside TVWCS (main.CecWatcher), on its GLib main loop. `on_hotkey(action)` opens the Quick Menu ("menu") or
+    switches to the app used last ("last");
     `on_tv_off()` sleeps the computer when that option is on."""
     NO_TV_AFTER=8   # s without a physical address: no TV (or it is off and cuts the 5 V line)
     def __init__(self, runtime, on_hotkey, on_tv_off):
@@ -350,7 +358,7 @@ class CecService:
 
     def start(self, options):
         from gi.repository import GLib
-        self.options=dict(options); self.logic.menu_button=options["menu"]
+        self.options=dict(options); self.logic.menu_button=options["menu"]; self.logic.last_button=options["last"]
         problem=None
         for path in adapters():
             try: a=Adapter(path)
@@ -382,7 +390,7 @@ class CecService:
 
     def update(self, options):
         """New options from Settings, while running."""
-        old=self.options; self.options=dict(options); self.logic.menu_button=options["menu"]
+        old=self.options; self.options=dict(options); self.logic.menu_button=options["menu"]; self.logic.last_button=options["last"]
         if old.get("tv_standby")!=options["tv_standby"]: self._inhibit_sleep(options["tv_standby"])
 
     def stop(self, release=False):
