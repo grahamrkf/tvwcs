@@ -127,7 +127,7 @@ class SoundTests(unittest.TestCase):
     def test_volume_steps_land_on_multiples_and_stay_in_range(self):
         self.assertEqual([sound.stepped(v,1) for v in (0,47,45,98,100)],[5,50,50,100,100])
         self.assertEqual([sound.stepped(v,-1) for v in (0,3,47,45,100)],[0,0,45,40,95])
-        self.assertEqual([sound.stepped(110,-1),sound.stepped(110,1),sound.stepped(112,-1)],[105,110,110])   # above 100 %: down from there
+        self.assertEqual([sound.stepped(110,-1),sound.stepped(110,1),sound.stepped(160,1,boost=True)],[100,100,150])   # above the top: down to it
         self.assertEqual([sound.stepped(100,1,boost=True),sound.stepped(150,1,boost=True)],[105,150])   # over-amplification: up to 150 %
         self.assertEqual(sound.top(),100); self.assertEqual(sound.top(True),150)
     def test_volume_keys_stop_at_the_top(self):
@@ -139,13 +139,39 @@ class SoundTests(unittest.TestCase):
             with mock.patch.object(sound,"run",fake_run): sound.volume_key(step,boost)
             return calls[-1][-1] if calls[-1][1]=="set-sink-volume" else None
         self.assertEqual([press(95,1),press(100,1),press(100,1,boost=True),press(150,1,boost=True),press(100,-1)],["100%","100%","105%","150%","95%"])
-        self.assertEqual(press(120,1),"120%")   # set louder elsewhere: the key does not make it louder still
+        self.assertEqual([press(120,1),press(170,1,boost=True)],["100%","150%"])   # set louder elsewhere: back to the top
         self.assertEqual(sound.main(["volume","sideways"]),2)
     def test_tvwcs_conf_binds_the_volume_keys(self):
         conf=(Path(__file__).resolve().parents[2]/"data"/"tvwcs.conf").read_text().splitlines()
         for flag in ("--locked ",""):
             for key,word in (("Raise","up"),("Lower","down")):
                 self.assertIn(f"bindsym {flag}--no-warn XF86Audio{key}Volume exec /usr/bin/tvwcs volume {word}",conf)
+    def test_loud_outputs_are_brought_down_to_the_top(self):
+        listing=("Sink #1\n\tName: hdmi\n\tVolume: front-left: 1 / 100% / 0 dB,   front-right: 1 / 155% / 11 dB\n\t        balance 0.00\n"
+                 "\tBase Volume: 65536 / 100% / 0.00 dB\n\tProperties:\n\t\tdevice.description = \"Volume: 900%\"\n"
+                 "Sink #2\n\tName: analog\n\tVolume: mono: 1 / 120% / 4 dB\n")
+        self.assertEqual(sound.loud_outputs(listing,100),["hdmi","analog"])
+        self.assertEqual(sound.loud_outputs(listing,150),["hdmi"])
+        calls=[]
+        def fake_run(cmd, timeout=None):
+            calls.append(cmd); return Result(True,0,listing if cmd[1]=="list" else "","")
+        with mock.patch.object(sound,"run",fake_run): self.assertEqual(sound.keep_under_top(boost=True),["hdmi"])
+        self.assertEqual(calls[-1],["pactl","set-sink-volume","hdmi","150%"])
+    def test_volume_guard_checks_at_start_and_on_output_changes(self):
+        class Proc:
+            def __init__(self): self.stdout=iter(["Event 'change' on sink-input #7\n","Event 'change' on sink #56\n","Event 'new' on sink #57\n","Event 'change' on source #3\n"])
+            def terminate(self): pass
+            def wait(self, timeout=None): return 0
+        checks=[]; guard=None
+        def popen(*a,**k):
+            if len(checks)>3: guard.stopping.set()
+            return Proc()
+        guard=sound.VolumeGuard(lambda:True,popen=popen,check=checks.append)
+        guard.RETRY=0
+        with mock.patch.object(sound,"have",lambda name:True):
+            guard.start(); guard.thread.join(5)
+        self.assertFalse(guard.thread.is_alive())
+        self.assertEqual(checks[:3],[True,True,True])   # at start, then the two output events (not a stream's, not an input's)
     def test_stream_indexes(self):
         self.assertEqual(sound.parse_short_streams("12\t52\t83\tPipeWire\ts16le\n15\t52\t90\n"),[12,15])
 

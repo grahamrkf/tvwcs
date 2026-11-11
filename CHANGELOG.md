@@ -1,5 +1,9 @@
 # Changelog
 
+## 5.16.1 — 2026-11-11
+
+- **The volume limit holds whatever raises the volume.** The remote's volume keys could still take the sound past 150 % (5.10.1 only changed sway's own key binding, so anything else that turned the volume up had no limit). TVWCS now watches the sound server (`pactl subscribe`) and brings any output above the limit straight back down: 100 %, or 150 % with Settings › Sound › Allow over-amplification. That covers volume keys bound somewhere else, apps, pavucontrol and `pactl` alike, and turning over-amplification off brings a louder volume down to 100 % at once. The volume keys and the Quick Menu's and Settings' − / + now take a volume that is above the limit down to it, instead of leaving it there.
+
 ## 5.16.0 — 2026-11-05
 
 - **The Quick Menu's search bar can fold away.** Turn off **Settings › Appearance › Search bar on the Quick Menu** and a search icon takes its place at the start of the status row, beside the network and volume icons. Selecting the icon unfolds the full-width search bar ready to type in, and typing anywhere in the Quick Menu unfolds it with the keys already typed in it (a channel number too). It folds away again once the selection leaves it with nothing typed, with Back/Esc (which also clears it), or with the icon again. With the bar folded, the Quick Menu opens on the row nearest it.
