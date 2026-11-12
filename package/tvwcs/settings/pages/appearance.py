@@ -1,4 +1,5 @@
-"""Settings > Appearance: TVWCS's theme, size, Quick Menu corner and channel options."""
+"""Settings > Appearance: TVWCS's look (theme, colours, size, font, background), how the Quick Menu behaves, its
+corner and the screen edge margin (ui/margin.py), and how many digits channel numbers have."""
 
 from __future__ import annotations
 import gi

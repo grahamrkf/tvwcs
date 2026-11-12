@@ -6,8 +6,8 @@ import gi, subprocess, sys
 
 gi.require_version("Gtk", "4.0")
 from gi.repository import GLib
-from tvwcs import settings.updates as updates
-from tvwcs.ui_control import StreamedRun
+from tvwcs.settings import updates
+from tvwcs.settings.app import StreamedRun
 
 PACKAGE = sys.argv[1] if len(sys.argv) > 1 else "nano"
 loop = GLib.MainLoop()

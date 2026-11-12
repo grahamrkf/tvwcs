@@ -1,5 +1,16 @@
 # Changelog
 
+## 5.22.0 — 2026-11-12
+
+Nothing changes on screen: this release makes the code easier to find your way around.
+
+- **The code is in folders.** `package/tvwcs/` now has `core/` (profiles, settings, search, hotkeys), `system/` (sway, power, locking, login, server mode, updates), `settings/` (the Settings app: its window, one file per page in `pages/`, and each page's back end) and `ui/` (the launcher's window). The Settings back ends lost their `control_` prefix (`control_sound.py` is now `settings/sound.py`).
+- **The two biggest files are split.** The launcher's window (`ui_window.py`, 3,000 lines once formatted) is now `ui/window.py` plus one file per part: Quick Menu rows, the bottom row and its panels, Applications, search, navigation, dialogs and the on-screen keyboard. The Settings pages (`ui_control_pages.py`) are one file each. The launcher's watchers moved to `watchers.py`.
+- **One code style.** The Python code is formatted with black (settings in `pyproject.toml`).
+- **New guides:** [CONTRIBUTING.md](CONTRIBUTING.md) (running, testing, style, releasing), [docs/WHERE-TO-CHANGE.md](docs/WHERE-TO-CHANGE.md) (which file to open for a given change), and a diagram of how the parts talk to each other in [PROJECT_OVERVIEW.md](PROJECT_OVERVIEW.md#code). The README screenshot and demo tooling is now in `tools/demo/`.
+- **Removed:** Settings › User's "Remove TVWCS's old login screen" (and `loginscreen migrate`): a computer still on TVWCS 4's login screen can update to 5.21 first, which removes it. Also the old 2.5.0 zip in `resources/` and unused imports.
+- **Updating:** the installer works with older releases too (it picks a module's old or new name), and 5.21's installer works with this one (`tvwcs/loginscreen.py` and `tvwcs/control_ubuntu.py` stay as old names). A volume indicator still running from 5.21 is recognised until the next login. The packages copy the whole `tvwcs` folder, and removing one clears every `__pycache__`.
+
 ## 5.21.0 — 2026-11-11
 
 - **Switch to the app used last with Super+Tab.** Like a TV remote's previous channel button: **Super+Tab** brings back the app you used before the one on screen (in TV mode its workspace, full screen as it was), and pressing it again goes back, so it flips between two apps. Over the Quick Menu it switches from the app the menu is shown over; with no other app open it says so in the Quick Menu.

@@ -6,8 +6,9 @@ import gi, sys
 
 gi.require_version("Gtk", "4.0")
 from gi.repository import GLib
-from tvwcs import settings.updates as updates, privilege
-from tvwcs.ui_control import StreamedRun
+from tvwcs.settings import updates
+from tvwcs.system import privilege
+from tvwcs.settings.app import StreamedRun
 import os
 
 PASSWORD, PACKAGE = sys.argv[1], (sys.argv[2] if len(sys.argv) > 2 else "yay-bin")

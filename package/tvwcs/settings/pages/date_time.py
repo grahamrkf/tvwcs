@@ -1,4 +1,5 @@
-"""Settings > Date and time: time zone and clock format. Back end: settings/date_time.py (timedatectl)."""
+"""Settings > Date and time: time zone, network time and the Quick Menu clock. Back end: settings/date_time.py
+(timedatectl)."""
 
 from __future__ import annotations
 import time

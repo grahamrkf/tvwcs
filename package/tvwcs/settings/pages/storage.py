@@ -1,4 +1,5 @@
-"""Settings > Storage: disks and USB drives. Back end: settings/storage.py (udisksctl)."""
+"""Settings > Storage: the drives inside or plugged into the computer, and switching one off to unplug it.
+Back end: settings/storage.py (udisksctl)."""
 
 from __future__ import annotations
 import gi

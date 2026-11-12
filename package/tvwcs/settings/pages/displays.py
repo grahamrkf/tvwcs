@@ -1,4 +1,4 @@
-"""Settings > Displays: resolution, scale, rotation and the screen edge margin. Back end: settings/display.py."""
+"""Settings > Displays: each display's resolution, refresh rate, scale and position. Back end: settings/display.py."""
 
 from __future__ import annotations
 import gi

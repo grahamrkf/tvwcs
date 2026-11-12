@@ -1,4 +1,5 @@
-"""Settings > Remote and hotkeys: the Quick Menu and Last app keys of each device, and app hotkeys."""
+"""Settings > Remote and hotkeys: each device's Quick Menu and Last app keys, app hotkeys, the TV remote over HDMI-CEC
+(system/cec.py) and adding TVWCS to the usual sway session. Back end: core/hotkeys.py."""
 
 from __future__ import annotations
 import gi

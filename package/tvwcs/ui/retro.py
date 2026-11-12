@@ -1,4 +1,4 @@
-"""The Retro theme's files (retro/, built by scripts/make-retro-assets.py) and the names of its pixel icons. No GTK
+"""The Retro theme's files (retro_assets/, built by scripts/make-retro-assets.py) and the names of its pixel icons. No GTK
 dependency: widgets.use_retro puts them to use, theme.py has its colours and rules."""
 
 from __future__ import annotations

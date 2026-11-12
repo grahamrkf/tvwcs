@@ -1,4 +1,5 @@
-"""Settings > Network: wired, Wi-Fi and IP settings. Back ends: settings/network.py (nmcli), settings/iwd.py."""
+"""Settings > Network: Ethernet, Wi-Fi and IP addresses set by hand. Back ends: settings/network.py (nmcli),
+settings/iwd.py."""
 
 from __future__ import annotations
 import os

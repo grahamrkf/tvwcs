@@ -1,4 +1,4 @@
-"""Settings > Sound: outputs, inputs, volume and HDMI profiles. Back end: settings/sound.py."""
+"""Settings > Sound: outputs (and their connectors), inputs and the volume limit. Back end: settings/sound.py."""
 
 from __future__ import annotations
 import gi

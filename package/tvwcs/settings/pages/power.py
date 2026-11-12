@@ -1,4 +1,5 @@
-"""Settings > Power and sleep: idle times, lid and power button, battery. Back end: system/power.py."""
+"""Settings > Power and sleep: idle times (screen off, lock, sleep), the battery and what the system does by itself.
+Back end: system/power.py."""
 
 from __future__ import annotations
 import gi

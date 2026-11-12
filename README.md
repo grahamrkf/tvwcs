@@ -187,7 +187,7 @@ A page whose software is missing offers to install it (Sound installs PipeWire, 
 - **Letters instead of icons:** install `adwaita-icon-theme` or `papirus-icon-theme`.
 - **Check for updates fails:** TVWCS needs internet access to `api.github.com`.
 
-How it works inside, the code layout, tests and releases are in [PROJECT_OVERVIEW.md](PROJECT_OVERVIEW.md).
+How it works inside, the code layout and releases are in [PROJECT_OVERVIEW.md](PROJECT_OVERVIEW.md). To change something, start with [CONTRIBUTING.md](CONTRIBUTING.md) and [docs/WHERE-TO-CHANGE.md](docs/WHERE-TO-CHANGE.md).
 
 ## License
 
