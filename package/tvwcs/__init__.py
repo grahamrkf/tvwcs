@@ -16,3 +16,8 @@ def _read_version():
 
 
 __version__ = _read_version()
+
+# Where TVWCS runs from: PACKAGE_DIR is this folder (/usr/lib/tvwcs/tvwcs once installed, package/tvwcs in the
+# repository) and LIB_DIR the folder above it, which is what PYTHONPATH needs for `python3 -m tvwcs....`.
+PACKAGE_DIR = Path(__file__).resolve().parent
+LIB_DIR = PACKAGE_DIR.parent

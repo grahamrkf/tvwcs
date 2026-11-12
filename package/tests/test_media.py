@@ -1,5 +1,7 @@
 import re, unittest
-from tvwcs import lockscreen, model, theme
+from tvwcs.system import lockscreen
+from tvwcs.core import model
+from tvwcs.ui import theme
 
 
 class MediaSettingsTests(unittest.TestCase):

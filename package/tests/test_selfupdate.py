@@ -2,8 +2,9 @@ import os, tempfile, unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from tvwcs import selfupdate, vendor
-from tvwcs.selfupdate import Release, UpdateError
+from tvwcs.system import selfupdate
+from tvwcs.core import vendor
+from tvwcs.system.selfupdate import Release, UpdateError
 
 
 def release_json(tag="v5.0.0", names=("tvwcs_5.0.0_all.deb",)):

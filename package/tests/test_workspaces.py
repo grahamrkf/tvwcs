@@ -1,7 +1,7 @@
 import unittest
-from tvwcs.applications import Application
-from tvwcs.model import LaunchProfile
-from tvwcs.workspaces import build_entries, quick_list, short_app_name, workspace_label
+from tvwcs.core.applications import Application
+from tvwcs.core.model import LaunchProfile
+from tvwcs.core.workspaces import build_entries, quick_list, short_app_name, workspace_label
 
 
 def app(name, wm_class):

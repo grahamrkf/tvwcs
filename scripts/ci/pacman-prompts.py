@@ -6,7 +6,7 @@ import gi, subprocess, sys
 
 gi.require_version("Gtk", "4.0")
 from gi.repository import GLib
-from tvwcs import control_updates as updates
+from tvwcs import settings.updates as updates
 from tvwcs.ui_control import StreamedRun
 
 PACKAGE = sys.argv[1] if len(sys.argv) > 1 else "nano"

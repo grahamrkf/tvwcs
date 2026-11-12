@@ -76,8 +76,8 @@ Logic modules have no GTK dependency and are tested without a display.
 |---|---|
 | Core | `model` (profiles, settings, layout, search), `applications` (discovery, window matching), `workspaces`, `ownership`, `profile_draft`, `pinlock`, `hotkeys` |
 | System | `window_manager` (sway IPC), `last_app` (focus history for the Last app key), `cec` (the TV remote over HDMI-CEC: kernel ioctls, a uinput keyboard, TV power), `return_focus`, `system_actions`, `privilege`, `power`, `lockscreen`, `cursor`, `features`, `session`, `tv_mode`, `quick_status`, `selfupdate`, `loginscreen`, `account`, `servermode`, `sway_include`, `distro`, `appearance`, `usage` |
-| Settings back ends | `control_cmd`, `control_sound`, `control_display`, `control_bluetooth`, `control_network`, `control_iwd`, `control_datetime`, `control_storage`, `control_updates`, `control_ubuntu`, `control_ssh`, `control_sysinfo` |
-| GTK interface | `main` (app, CLI), `ui_window` (Quick Menu, Applications, dialogs, on-screen keyboard), `ui_editors` (profile editor), `ui_margin`, `ui_control`, `ui_control_pages` and `ui_control_login` (Settings), `widgets`, `theme`, `retro` |
+| Settings back ends | `settings.cmd`, `settings.sound`, `settings.display`, `settings.bluetooth`, `settings.network`, `settings.iwd`, `settings.date_time`, `settings.storage`, `settings.updates`, `settings.ubuntu`, `settings.ssh`, `settings.sysinfo` |
+| GTK interface | `main` (app, CLI), `ui.window` (Quick Menu, Applications, dialogs, on-screen keyboard), `ui.editors` (profile editor), `ui.margin`, `settings.app`, `settings.pages` and `settings.pages.user` (Settings), `widgets`, `theme`, `retro` |
 
 ```
 package/tvwcs/   modules                  package/tests/  unit tests

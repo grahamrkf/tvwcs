@@ -4,7 +4,8 @@ the server user's automatic login, starting TVWCS on the screen, the command lin
 import os, pwd, tempfile, unittest
 from pathlib import Path
 from unittest import mock
-from tvwcs import account, power, servermode, system_actions
+from tvwcs.settings import account
+from tvwcs.system import power, servermode, system_actions
 
 
 class Done:
@@ -168,7 +169,9 @@ class AdminTests(unittest.TestCase):
             return 0, "", 2
 
         self.assertEqual(
-            account.run_as_admin("alice", "pw", ["env", "python3", "-m", "tvwcs.servermode", "off"], run=converse),
+            account.run_as_admin(
+                "alice", "pw", ["env", "python3", "-m", "tvwcs.system.servermode", "off"], run=converse
+            ),
             (0, ""),
         )
         argv, answers = seen[0]

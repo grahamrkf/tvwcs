@@ -5,7 +5,7 @@ it offers, Arch, and removing TVWCS. Skipped outside the repository."""
 import json, os, pty, pwd, select, shutil, subprocess, tempfile, time, unittest
 from pathlib import Path
 from unittest import mock
-from tvwcs import loginscreen
+from tvwcs.system import loginscreen
 
 ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = ROOT / "install.sh"

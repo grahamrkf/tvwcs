@@ -1,11 +1,10 @@
 """The profile editor's draft: what is stored when Save is pressed (no display needed)."""
 
 import unittest
-from types import SimpleNamespace
 
-from tvwcs.model import LAUNCH_NEW_WORKSPACE, LAUNCH_SAME, LaunchProfile
-from tvwcs.pinlock import check_pin
-from tvwcs.profile_draft import ProfileDraft
+from tvwcs.core.model import LAUNCH_NEW_WORKSPACE, LAUNCH_SAME, LaunchProfile
+from tvwcs.core.pinlock import check_pin
+from tvwcs.core.profile_draft import ProfileDraft
 
 
 class ProfileDraftTests(unittest.TestCase):
@@ -44,7 +43,7 @@ class ProfileDraftTests(unittest.TestCase):
         self.assertTrue(check_pin("1234", d.profile().pin_hash))
 
     def test_profile_names_follow_the_application_name(self):
-        from tvwcs.model import LaunchProfile, display_name, next_label, profile_label, default_of
+        from tvwcs.core.model import LaunchProfile, display_name, next_label, profile_label, default_of
 
         main = LaunchProfile("a", "kodi.desktop", "Kodi")
         old = LaunchProfile("b", "kodi.desktop", "Kodi profile 2")

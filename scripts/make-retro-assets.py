@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build the Retro theme's files into package/tvwcs/retro/ (they are committed, so a build needs none of this):
+"""Build the Retro theme's files into package/tvwcs/ui/retro_assets/ (they are committed, so a build needs none of this):
 
 - TVWCSPixel5x7.ttf, the small text: the 5 x 7 font of Adafruit's GFX library (glcdfont.c, BSD licence, in the
   order of code page 437), with the characters in scripts/retro/glyphs.txt added;
@@ -26,7 +26,7 @@ from fontTools.pens.ttGlyphPen import TTGlyphPen
 
 ROOT = Path(__file__).resolve().parent.parent
 SRC = ROOT / "scripts" / "retro"
-OUT = ROOT / "package" / "tvwcs" / "retro"
+OUT = ROOT / "package" / "tvwcs" / "ui" / "retro_assets"
 UNIT = 125  # font units per pixel
 
 CP437_LOW = "\0☺☻♥♦♣♠•◘○◙♂♀♪♫☼►◄↕‼¶§▬↨↑↓→←∟↔▲▼"

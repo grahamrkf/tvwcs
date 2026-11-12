@@ -1,5 +1,5 @@
 import unittest
-from tvwcs.hotkeys import (
+from tvwcs.core.hotkeys import (
     DEFAULT_HOTKEYS,
     HotkeyCapture,
     binding,
@@ -137,7 +137,7 @@ class HotkeyTests(unittest.TestCase):
 
 class NavigationKeyTests(unittest.TestCase):
     def test_d_pad_ok_and_back_navigate_the_dialog(self):
-        from tvwcs.hotkeys import is_navigation
+        from tvwcs.core.hotkeys import is_navigation
 
         for k in ("Up", "Down", "Left", "Right", "Return", "KP_Enter", "Escape", "Back", "Tab"):
             self.assertTrue(is_navigation(k), k)

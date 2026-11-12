@@ -2,7 +2,7 @@
 
 import unittest
 
-from tvwcs import cursor
+from tvwcs.system import cursor
 
 
 class CursorTests(unittest.TestCase):

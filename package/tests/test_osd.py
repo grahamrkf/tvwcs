@@ -2,7 +2,7 @@ import os, signal, tempfile, unittest
 from pathlib import Path
 from unittest import mock
 
-from tvwcs import osd
+from tvwcs.ui import osd
 
 
 class LevelTests(unittest.TestCase):
@@ -73,7 +73,7 @@ class ShowTests(unittest.TestCase):
             self.assertTrue(osd.show(55, True, self.env))
         self.assertEqual(Path(self.dir.name, osd.LEVEL_NAME).read_text(), "55 1\n")
         argv = popen.call_args.args[0]
-        self.assertEqual(argv[1:], ["-m", "tvwcs.osd"])
+        self.assertEqual(argv[1:], ["-m", "tvwcs.ui.osd"])
         self.assertIn(osd.LAYER_SHELL_LIB, popen.call_args.kwargs["env"]["LD_PRELOAD"])
         Path(self.dir.name, osd.PID_NAME).write_text(f"{os.getpid()}\n")
         with (
@@ -96,8 +96,8 @@ class ShowTests(unittest.TestCase):
             (proc / "4242" / "stat").write_bytes(f"4242 (python3) {state} 1 2 3".encode())
             return osd.running_pid(self.env, proc=str(proc))
 
-        self.assertEqual(fake(b"python3\0-m\0tvwcs.osd\0", "S"), 4242)
-        self.assertIsNone(fake(b"python3\0-m\0tvwcs.osd\0", "Z"))  # ended, not yet reaped
+        self.assertEqual(fake(b"python3\0-m\0tvwcs.ui.osd\0", "S"), 4242)
+        self.assertIsNone(fake(b"python3\0-m\0tvwcs.ui.osd\0", "Z"))  # ended, not yet reaped
         self.assertIsNone(fake(b"bash\0", "S"))  # the id now belongs to another program
         self.assertIsNone(osd.running_pid(self.env, proc=str(Path(self.dir.name, "none"))))
 

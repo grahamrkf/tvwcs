@@ -3,7 +3,7 @@
 import unittest
 from unittest import mock
 
-from tvwcs import features as F
+from tvwcs.system import features as F
 
 
 class FeatureTests(unittest.TestCase):

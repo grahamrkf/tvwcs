@@ -1,5 +1,5 @@
 import unittest
-from tvwcs.system_actions import (
+from tvwcs.system.system_actions import (
     SYSTEM_ACTIONS,
     command_for,
     lock_command,
@@ -11,7 +11,7 @@ from tvwcs.system_actions import (
 )
 
 from unittest import mock as _mock
-from tvwcs import servermode as _servermode
+from tvwcs.system import servermode as _servermode
 
 # These tests are about a computer without server mode, whatever the one running them has in /etc/tvwcs/server-mode.
 _not_server = _mock.patch.object(_servermode, "server_user", lambda: "")

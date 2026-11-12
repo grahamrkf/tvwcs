@@ -1,10 +1,11 @@
 """The login screen and automatic login without GTK, in a pretend root folder (TVWCS_ROOT): greetd, LightDM and SDDM,
 removing TVWCS 4.x's own login screen, and changing a password."""
 
-import json, os, tempfile, unittest
+import os, tempfile, unittest
 from pathlib import Path
 from unittest import mock
-from tvwcs import account, loginscreen
+from tvwcs.settings import account
+from tvwcs.system import loginscreen
 
 OLD_GREETD = """# Written by TVWCS (Settings > User > Login screen). Removing it puts back the config from before.
 [terminal]
@@ -241,7 +242,7 @@ class RootTests(unittest.TestCase):
         self.assertEqual(argv[:2], ["sh", "-c"])
         self.assertEqual(argv[3:6], ["sh", "1", "greetd"])
         self.assertEqual(argv[6:8], ["env", "PYTHONDONTWRITEBYTECODE=1"])
-        self.assertEqual(argv[-4:], ["-m", "tvwcs.loginscreen", "greetd", "tv"])
+        self.assertEqual(argv[-4:], ["-m", "tvwcs.system.loginscreen", "greetd", "tv"])
         with self.assertRaises(ValueError):
             loginscreen.root_command(["greetd"], ("bad name",))
 

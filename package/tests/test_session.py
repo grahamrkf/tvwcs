@@ -1,6 +1,6 @@
 import os, subprocess, tempfile, time, unittest
 from pathlib import Path
-from tvwcs.session import first_time_this_login, is_tvwcs_process, runtime_dir, session_key
+from tvwcs.system.session import first_time_this_login, is_tvwcs_process, runtime_dir, session_key
 
 
 class SessionTests(unittest.TestCase):

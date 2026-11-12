@@ -5,8 +5,9 @@ import os, re, subprocess, tempfile, unittest
 from pathlib import Path
 from unittest import mock
 
-from tvwcs import control_updates as upd, distro, features, loginscreen, selfupdate, control_ssh
-from tvwcs.selfupdate import Release, UpdateError
+from tvwcs.settings import updates as upd, ssh
+from tvwcs.system import distro, features, loginscreen, selfupdate
+from tvwcs.system.selfupdate import Release, UpdateError
 
 REPO = Path(__file__).resolve().parents[2]
 
@@ -45,7 +46,7 @@ class FedoraPackageTests(unittest.TestCase):
             self.assertIn(
                 "enable --now bluetooth.service", features.install_argv(["bluez"], features.BY_KEY["bluetooth"])[2]
             )
-            self.assertEqual(control_ssh.install_argv()[-1], "openssh-server")
+            self.assertEqual(ssh.install_argv()[-1], "openssh-server")
             self.assertTrue(distro.can_install())
 
     def test_atomic(self):
@@ -104,7 +105,7 @@ firefox.x86_64                     145.0-1.fc42                     updates
             self.assertIn("rpm-ostree", s.message)
 
     def test_reboot_from_needs_restarting(self):
-        from tvwcs.control_cmd import Result
+        from tvwcs.settings.cmd import Result
 
         exists = lambda p: p in ("/usr/lib/modules", "/usr/lib/modules/6.1")
         for code, want in ((1, True), (0, False)):

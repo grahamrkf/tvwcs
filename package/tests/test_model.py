@@ -1,6 +1,6 @@
-import copy, json, tempfile, unittest
+import json, tempfile, unittest
 from pathlib import Path
-from tvwcs.model import (
+from tvwcs.core.model import (
     ACCENT_NAMES,
     DEFAULT_SETTINGS,
     MARGIN_RANGE,
@@ -22,7 +22,7 @@ from tvwcs.model import (
     PIN_LAUNCH,
     PIN_LAUNCH_AND_SHOW,
 )
-from tvwcs.applications import Application
+from tvwcs.core.applications import Application
 
 
 class ModelTests(unittest.TestCase):
@@ -379,7 +379,7 @@ class SettingsAndProfileTests(unittest.TestCase):
             self.assertEqual(ConfigStore(Path(d) / "b.json").settings["hotkeys"]["remote"]["menu"], "F2")
 
     def test_pin_fields_persist_and_are_validated(self):
-        from tvwcs.pinlock import make_hash
+        from tvwcs.core.pinlock import make_hash
 
         with tempfile.TemporaryDirectory() as d:
             path = Path(d) / "c.json"
@@ -579,7 +579,7 @@ class ProfileHotkeyTests(unittest.TestCase):
 
 class ScaleTests(unittest.TestCase):
     def test_sizes_1_to_5_and_the_automatic_ones(self):
-        from tvwcs.model import SIZES, size_of, size_label
+        from tvwcs.core.model import SIZES, size_of, size_label
 
         self.assertEqual((SIZES[3], SIZES[4]), (1.0, 1.6))  # the desktop and TV sizes of before 5.8
         self.assertEqual((size_of({}, True), size_of({}, False)), (4, 3))
@@ -591,7 +591,7 @@ class ScaleTests(unittest.TestCase):
         self.assertEqual((size_label(3), size_label(4), size_label(1)), ("3 (desktop size)", "4 (TV size)", "1"))
 
     def test_old_size_names_become_numbers(self):
-        from tvwcs.model import _clean_settings, is_4k
+        from tvwcs.core.model import _clean_settings, is_4k
 
         self.assertEqual(
             [
@@ -614,7 +614,7 @@ class ScaleTests(unittest.TestCase):
         self.assertFalse(is_4k(5120, 1440))
 
     def test_large_sizes_shrink_on_a_smaller_screen(self):
-        from tvwcs.model import effective_scale
+        from tvwcs.core.model import effective_scale
 
         self.assertEqual(effective_scale((4, False), 1080), 1.6)
         self.assertEqual(effective_scale((4, False), 0), 1.6)
@@ -766,7 +766,7 @@ class ChannelZeroTests(unittest.TestCase):
                 store.set_profile(LaunchProfile("x", "c.desktop", "C", channel=-1))
 
     def test_settings_gets_channel_000_once(self):
-        from tvwcs.model import SETTINGS_DESKTOP_ID
+        from tvwcs.core.model import SETTINGS_DESKTOP_ID
 
         settings = Application(
             SETTINGS_DESKTOP_ID, "TVWCS Settings", None, None, None, ("Settings",), "/x", "tvwcs settings"
@@ -784,7 +784,7 @@ class ChannelZeroTests(unittest.TestCase):
             self.assertEqual(store.get("s").channel, 7)  # the user's later choice stays
 
     def test_channel_000_already_taken_is_left_alone(self):
-        from tvwcs.model import SETTINGS_DESKTOP_ID
+        from tvwcs.core.model import SETTINGS_DESKTOP_ID
 
         settings = Application(
             SETTINGS_DESKTOP_ID, "TVWCS Settings", None, None, None, ("Settings",), "/x", "tvwcs settings"
@@ -822,7 +822,7 @@ class ChannelZeroTests(unittest.TestCase):
             self.assertNotIn("flatpak_unverified", s)
 
     def test_wallpaper_choices(self):
-        from tvwcs.model import WALLPAPERS, DEFAULT_WALLPAPER
+        from tvwcs.core.model import WALLPAPERS, DEFAULT_WALLPAPER
 
         self.assertEqual(len(WALLPAPERS), 18)
         self.assertIn(DEFAULT_WALLPAPER, WALLPAPERS)

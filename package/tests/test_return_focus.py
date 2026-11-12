@@ -1,7 +1,7 @@
 import json, tempfile, unittest
 from pathlib import Path
-from tvwcs import return_focus
-from tvwcs.window_manager import WindowManager
+from tvwcs.system import return_focus
+from tvwcs.system.window_manager import WindowManager
 
 
 def win(i, cls, focused=False, fullscreen=False):

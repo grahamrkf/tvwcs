@@ -3,7 +3,7 @@
 import re, tempfile, unittest
 from pathlib import Path
 
-from tvwcs import lockscreen, system_actions
+from tvwcs.system import lockscreen, system_actions
 
 
 def which_of(*names):
@@ -77,7 +77,7 @@ class LockScreenTests(unittest.TestCase):
             self.assertIn("/etc/fonts/fonts.conf", lockscreen.fonts_conf(Path(d)))
 
     def test_colours_match_the_theme(self):
-        from tvwcs import theme
+        from tvwcs.ui import theme
 
         for name, (bg, fg, muted) in lockscreen.MODERN.items():
             p = theme.PALETTES[name]
@@ -89,7 +89,7 @@ class LockScreenTests(unittest.TestCase):
             p = theme.MEDIA_PALETTES[name]
             self.assertEqual((p["PANE"], p["FG"], p["MUTED"], p["ACCENT"]), (bg, fg, muted, accent))
             self.assertTrue(p["FONT"].startswith(f'"{ring}"'))
-        from tvwcs.model import MEDIA_LOOKS, RETRO_WALLPAPERS
+        from tvwcs.core.model import MEDIA_LOOKS, RETRO_WALLPAPERS
 
         self.assertEqual(lockscreen.RETRO_BACKGROUNDS, RETRO_WALLPAPERS)
         self.assertEqual(set(lockscreen.MEDIA), set(MEDIA_LOOKS))
@@ -110,7 +110,7 @@ class LockScreenTests(unittest.TestCase):
         self.assertEqual(lockscreen.lock_at_start(on, tv, sw, ""), "")  # passwd -S could not tell: lock
 
     def test_password_status(self):
-        from tvwcs.account import password_status
+        from tvwcs.settings.account import password_status
 
         self.assertEqual(password_status(lambda _a: "htpc P 2026-10-01 0 99999 7 -1\n"), "P")
         self.assertEqual(password_status(lambda _a: "tv L 2026-10-01 0 99999 7 -1\n"), "L")

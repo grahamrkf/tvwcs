@@ -3,10 +3,10 @@ and systemd-inhibit from saved samples."""
 
 import os, tempfile, unittest
 
-from tvwcs import power
+from tvwcs.system import power
 
 from unittest import mock as _mock
-from tvwcs import servermode as _servermode
+from tvwcs.system import servermode as _servermode
 
 # These tests are about a computer without server mode, whatever the one running them has in /etc/tvwcs/server-mode.
 _not_server = _mock.patch.object(_servermode, "server_user", lambda: "")

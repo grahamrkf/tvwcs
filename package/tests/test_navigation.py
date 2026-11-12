@@ -66,23 +66,27 @@ _install_stub()
 import importlib
 
 _REAL = {k: v for k, v in sys.modules.items() if k.startswith("tvwcs.")}
-for m in ("tvwcs.widgets", "tvwcs.theme", "tvwcs.ui_settings", "tvwcs.ui_window"):
-    sys.modules.pop(m, None)
-ui_window = importlib.import_module("tvwcs.ui_window")
-NavGroup = sys.modules["tvwcs.widgets"].NavGroup
+for m in [m for m in sys.modules if m == "tvwcs.ui" or m.startswith("tvwcs.ui.")]:
+    sys.modules.pop(m, None)  # the launcher's GTK modules load again, against the stub
+ui_window = importlib.import_module("tvwcs.ui.window")
+NavGroup = sys.modules["tvwcs.ui.widgets"].NavGroup
 for k, v in _SAVED.items():
     if v is None:
         sys.modules.pop(k, None)
     else:
         sys.modules[k] = v
 # the modules loaded against the stub stay with this file: later tests import their own, with the real GTK or none
-for k in [k for k in sys.modules if k.startswith("tvwcs.")]:
+for k in sorted((k for k in sys.modules if k.startswith("tvwcs.")), key=len):
     if k in _REAL:
         sys.modules[k] = _REAL[k]
     else:
         sys.modules.pop(k, None)
-    if hasattr(sys.modules["tvwcs"], k[6:]):
-        setattr(sys.modules["tvwcs"], k[6:], _REAL[k]) if k in _REAL else delattr(sys.modules["tvwcs"], k[6:])
+    parent, leaf = k.rsplit(".", 1)
+    if parent in sys.modules and hasattr(sys.modules[parent], leaf):
+        if k in _REAL:
+            setattr(sys.modules[parent], leaf, _REAL[k])
+        else:
+            delattr(sys.modules[parent], leaf)
 Editable = ui_window.Gtk.Editable
 
 
@@ -318,7 +322,7 @@ class NavigationTests(unittest.TestCase):
 
     def test_a_top_corner_reverses_the_navigation_order(self):
         win = make_window()
-        a = options_row(win, expanded=True)
+        options_row(win, expanded=True)
         b = options_row(win, expanded=True)
         o1, o2 = W("option 2"), W("option 1")
         b[0].options = [NavGroup([o1]), NavGroup([o2])]
@@ -557,8 +561,8 @@ class TypingTests(unittest.TestCase):
 
 class PinPadTests(unittest.TestCase):
     def pad(self, pin="1234"):
-        from tvwcs.pinlock import PinGate, make_hash
-        from tvwcs.model import LaunchProfile
+        from tvwcs.core.pinlock import PinGate, make_hash
+        from tvwcs.core.model import LaunchProfile
 
         win = make_window()
         profile = LaunchProfile("p", "a.desktop", "Kids", pin_hash=make_hash(pin))

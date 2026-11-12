@@ -1,5 +1,5 @@
 import unittest
-from tvwcs.privilege import absolute, doas_command, needs_root, polkit_refused, sudo_command, sudo_outcome
+from tvwcs.system.privilege import absolute, doas_command, needs_root, polkit_refused, sudo_command, sudo_outcome
 
 have = lambda names: (lambda c: f"/usr/sbin/{c}" if c in names else None)
 

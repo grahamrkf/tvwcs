@@ -1,11 +1,11 @@
-"""control_iwd and the Network page without NetworkManager: iwd's networks from busctl's JSON, its files, and whether
+"""settings.iwd and the Network page without NetworkManager: iwd's networks from busctl's JSON, its files, and whether
 DHCP gave an address."""
 
 import json, os, tempfile, unittest
 from unittest import mock
 
-from tvwcs import control_iwd as iwd, control_network as net
-from tvwcs.control_cmd import Result
+from tvwcs.settings import iwd, network as net
+from tvwcs.settings.cmd import Result
 
 
 def v(t, d):
@@ -204,7 +204,7 @@ class FileTests(unittest.TestCase):
 
     def test_root_argv_and_usage(self):
         argv = iwd.root_argv("forget", "Home")
-        self.assertEqual(argv[-4:], ["-m", "tvwcs.control_iwd", "forget", "Home"])
+        self.assertEqual(argv[-4:], ["-m", "tvwcs.settings.iwd", "forget", "Home"])
         self.assertEqual(iwd.main([]), 2)
         self.assertEqual(iwd.main(["join"]), 2)
         self.assertEqual(iwd.disconnect("/etc/passwd"), "Unexpected device.")

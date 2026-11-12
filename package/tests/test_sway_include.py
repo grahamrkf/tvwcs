@@ -2,7 +2,7 @@
 
 import json, tempfile, unittest, unittest.mock
 from pathlib import Path
-from tvwcs import sway_include as si
+from tvwcs.system import sway_include as si
 
 
 class Out:
@@ -78,7 +78,7 @@ if __name__ == "__main__":
 
 class ReloadAfterUpdateTests(unittest.TestCase):
     def test_conf_newer_than_what_sway_read(self):
-        from tvwcs import sway_include as S
+        from tvwcs.system import sway_include as S
 
         self.assertTrue(S.conf_is_newer(200, 100))  # installed while sway ran
         self.assertFalse(S.conf_is_newer(50, 100))  # sway started after the install: it read it
@@ -87,7 +87,7 @@ class ReloadAfterUpdateTests(unittest.TestCase):
     def test_it_reloads_once_after_an_update(self):
         import os, tempfile
         from pathlib import Path
-        from tvwcs import sway_include as S
+        from tvwcs.system import sway_include as S
 
         with tempfile.TemporaryDirectory() as d:
             sock = Path(d, "sway-ipc.sock")

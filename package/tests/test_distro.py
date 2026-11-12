@@ -4,7 +4,8 @@ import os, subprocess, tempfile, unittest
 from pathlib import Path
 from unittest import mock
 
-from tvwcs import distro, features, loginscreen, selfupdate, control_ssh
+from tvwcs.system import distro, features, loginscreen, selfupdate
+from tvwcs.settings import ssh
 
 
 def arch():
@@ -95,7 +96,7 @@ class ArchPackageTests(unittest.TestCase):
                 "enable --now bluetooth.service", features.install_argv(["bluez"], features.BY_KEY["bluetooth"])[2]
             )
             self.assertNotIn("enable", features.install_argv(["pipewire"], features.BY_KEY["sound"])[2])
-            self.assertEqual(control_ssh.install_argv()[-1], "openssh")
+            self.assertEqual(ssh.install_argv()[-1], "openssh")
         self.assertNotIn(
             "enable", features.install_argv(["bluez"], features.BY_KEY["bluetooth"])[4]
         )  # Debian starts it itself

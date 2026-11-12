@@ -1,5 +1,7 @@
 import re, unittest
-from tvwcs import appearance, model, retro
+from tvwcs.system import appearance
+from tvwcs.core import model
+from tvwcs.ui import retro
 
 
 class RetroIconTests(unittest.TestCase):
@@ -74,7 +76,7 @@ class RetroSettingsTests(unittest.TestCase):
         self.assertEqual(appearance.wallpaper_argv("static"), ["swaymsg", f'output * bg "{retro.STATIC_PICTURE}" fill'])
 
 
-from tvwcs import theme  # needs no GTK
+from tvwcs.ui import theme
 
 
 class RetroThemeTests(unittest.TestCase):

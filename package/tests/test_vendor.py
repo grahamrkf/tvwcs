@@ -2,10 +2,11 @@ import json, os, tempfile, unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from tvwcs import selfupdate, vendor
-from tvwcs.applications import Application
-from tvwcs.model import ConfigStore
-from tvwcs.selfupdate import UpdateError
+from tvwcs.system import selfupdate
+from tvwcs.core import vendor
+from tvwcs.core.applications import Application
+from tvwcs.core.model import ConfigStore
+from tvwcs.system.selfupdate import UpdateError
 
 
 def app(desktop_id, name):

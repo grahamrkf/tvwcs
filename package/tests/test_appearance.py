@@ -1,7 +1,7 @@
 import tempfile, unittest
 from pathlib import Path
 from unittest import mock
-from tvwcs import appearance
+from tvwcs.system import appearance
 
 
 class AppearanceTests(unittest.TestCase):

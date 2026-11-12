@@ -1,5 +1,5 @@
 import io, json, unittest
-from tvwcs import last_app
+from tvwcs.system import last_app
 
 
 def event(change, con_id, app_id="foot", name="foot"):

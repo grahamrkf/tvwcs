@@ -19,8 +19,9 @@ NAME="TVWCS-${VERSION}${SUFFIX}"
 "$ROOT/scripts/build-debs.sh"
 STAGE=$(mktemp -d); trap 'rm -rf "$STAGE"' EXIT
 rm -f "$ROOT/resources/$NAME.zip" "$ROOT/resources/tvwcs.tar.gz"   # zip -r would otherwise add to an old archive
-mkdir -p "$STAGE/tvwcs/tvwcs"
-cp "$ROOT"/package/tvwcs/*.py "$STAGE/tvwcs/tvwcs/"
+mkdir -p "$STAGE/tvwcs"
+cp -r "$ROOT/package/tvwcs" "$STAGE/tvwcs/tvwcs"
+find "$STAGE/tvwcs/tvwcs" -name __pycache__ -type d -prune -exec rm -rf {} +
 cp "$ROOT/resources/tvwcs_${VERSION}_all.deb" "$STAGE/tvwcs/"
 cp "$ROOT/install.sh" "$ROOT/VERSION" "$ROOT/LICENSE" "$ROOT/README.md" "$ROOT/CHANGELOG.md" "$STAGE/tvwcs/"
 if command -v zip >/dev/null 2>&1; then

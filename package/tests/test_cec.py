@@ -1,8 +1,8 @@
 import errno, struct, tempfile, unittest
 from pathlib import Path
 
-from tvwcs import cec
-from tvwcs.model import _clean_settings
+from tvwcs.system import cec
+from tvwcs.core.model import _clean_settings
 
 
 class Clock:

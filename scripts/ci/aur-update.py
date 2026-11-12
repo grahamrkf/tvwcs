@@ -6,7 +6,7 @@ import gi, sys
 
 gi.require_version("Gtk", "4.0")
 from gi.repository import GLib
-from tvwcs import control_updates as updates, privilege
+from tvwcs import settings.updates as updates, privilege
 from tvwcs.ui_control import StreamedRun
 import os
 

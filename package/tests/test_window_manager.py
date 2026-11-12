@@ -1,6 +1,6 @@
 import unittest
-from tvwcs.window_manager import WindowManager
-from tvwcs.model import LAUNCH_NEW_WORKSPACE, LAUNCH_SAME
+from tvwcs.system.window_manager import WindowManager
+from tvwcs.core.model import LAUNCH_NEW_WORKSPACE, LAUNCH_SAME
 
 
 def con(i, title, cls, urgent=False):
@@ -135,7 +135,7 @@ class WindowManagerTests(unittest.TestCase):
         self.assertFalse(by_id[18]["workspace_visible"])  # 18: parked
 
     def test_find_matching_returns_the_window_without_focusing_it(self):
-        from tvwcs.model import LaunchProfile
+        from tvwcs.core.model import LaunchProfile
 
         wm = FakeWM()
         found = wm.find_matching(LaunchProfile("p", "xterm.desktop", "Terminal"), None)
@@ -250,7 +250,7 @@ class WindowManagerTests(unittest.TestCase):
     def test_sway_uses_swaymsg_and_lists_wayland_windows(self):
         from unittest import mock
 
-        with mock.patch("tvwcs.window_manager.shutil.which", lambda name: f"/usr/bin/{name}"):
+        with mock.patch("tvwcs.system.window_manager.shutil.which", lambda name: f"/usr/bin/{name}"):
             sway = WindowManager()
         self.assertEqual(sway.binary, "/usr/bin/swaymsg")
         tree = TREE["nodes"][0]["nodes"][1]["nodes"]

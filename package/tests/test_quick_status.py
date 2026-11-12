@@ -4,7 +4,8 @@ samples (no display, no timedatectl, no sway needed)."""
 import os, tempfile, time, unittest
 from pathlib import Path
 
-from tvwcs import control_datetime as dt, quick_status as qs, tv_mode
+from tvwcs.settings import date_time as dt
+from tvwcs.system import quick_status as qs, tv_mode
 
 ROUTE = """Iface	Destination	Gateway 	Flags	RefCnt	Use	Metric	Mask		MTU	Window	IRTT
 wlp2s0	00000000	0101A8C0	0003	0	0	2000	00000000	0	0	0

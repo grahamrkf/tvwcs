@@ -1,7 +1,6 @@
-import os, tempfile, unittest
-from unittest import mock
+import tempfile, unittest
 from pathlib import Path
-from tvwcs.applications import _application_directories, _parse_desktop_file, match_window, Application
+from tvwcs.core.applications import _parse_desktop_file, match_window, Application
 
 
 def app(desktop_id, name, wm_class=None, icon=None):
