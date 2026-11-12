@@ -42,3 +42,8 @@ version = { attr = "tvwcs.__version__" }
 
 [tool.unittest]
 start-dir = "package/tests"
+
+# Code style: run `black .` from the repository root before committing (CONTRIBUTING.md).
+[tool.black]
+line-length = 120
+target-version = ["py39"]

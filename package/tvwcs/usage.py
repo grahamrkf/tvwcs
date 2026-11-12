@@ -1,10 +1,11 @@
 """`tvwcs help`: what the tvwcs command does. No GTK, so it prints at once (and at a text console).
 
 The older spellings still work (start, -s/--server-mode, --no-server-mode, --start, control) but are no longer shown."""
+
 from __future__ import annotations
 import sys
 
-USAGE="""Usage: tvwcs [COMMAND]
+USAGE = """Usage: tvwcs [COMMAND]
 
   tvwcs                          what fits where you type it: at a text console, TVWCS's session; in a
                                  sway session with TVWCS, the Quick Menu; in another sway session or
@@ -39,11 +40,17 @@ Used by TVWCS's sway config, hotkeys and idle timer (not usually typed):
                                  what swayidle runs when a Power and sleep time is reached
   tvwcs lock-at-start            lock straight away if Settings > User asks for it"""
 
+
 def main(argv=None, out=None) -> int:
-    print(USAGE,file=out or sys.stdout); return 0
+    print(USAGE, file=out or sys.stdout)
+    return 0
+
 
 def wrong(out=None) -> int:
     """An unknown command: the usage on stderr, exit status 2."""
-    print(USAGE,file=out or sys.stderr); return 2
+    print(USAGE, file=out or sys.stderr)
+    return 2
 
-if __name__=="__main__": sys.exit(main(sys.argv[1:]))
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))
