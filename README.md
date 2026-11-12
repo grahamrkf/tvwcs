@@ -35,6 +35,27 @@ TVWCS has two modes:
   <tr>
     <td colspan="2" valign="top">Each row shows its current value on the right. OK/Enter changes it.</td>
   </tr>
+  <tr>
+    <th colspan="2">The Media theme</th>
+  </tr>
+  <tr>
+    <td colspan="2"><img src="assets/media-theme.png" alt="The Quick Menu in the Media theme's three looks: Jellyfin, Emby and Plex colours" width="100%"></td>
+  </tr>
+  <tr>
+    <td colspan="2" valign="top">Settings › Appearance › Theme › Media: dark and rounded, in colours that go with Jellyfin, Emby or Plex (left to right). The colours are TVWCS's own; no logos.</td>
+  </tr>
+  <tr>
+    <th width="50%">Volume indicator</th>
+    <th width="50%">The TV's own remote (HDMI-CEC)</th>
+  </tr>
+  <tr>
+    <td valign="top"><img src="assets/volume-indicator.png" alt="The volume indicator at the bottom of the screen, over a full-screen mockup app" width="100%"></td>
+    <td valign="top"><img src="assets/tv-remote.png" alt="Settings, Remote and hotkeys, with the TV remote (HDMI-CEC) section" width="100%"></td>
+  </tr>
+  <tr>
+    <td valign="top">The volume and mute keys show the level for a moment, over full-screen apps too (with gtk4-layer-shell).</td>
+    <td valign="top">Settings › Remote and hotkeys on a computer with a CEC port: the TV's Red button opens the Quick Menu, Previous channel switches to the app used last, and the TV follows the computer's power. Shown here with a simulated TV.</td>
+  </tr>
 </table>
 
 ### Demos
