@@ -98,6 +98,7 @@ class ShowTests(unittest.TestCase):
 
         self.assertEqual(fake(b"python3\0-m\0tvwcs.ui.osd\0", "S"), 4242)
         self.assertIsNone(fake(b"python3\0-m\0tvwcs.ui.osd\0", "Z"))  # ended, not yet reaped
+        self.assertEqual(fake(b"python3\0-m\0tvwcs.osd\0", "S"), 4242)  # 5.21's, still running after an update
         self.assertIsNone(fake(b"bash\0", "S"))  # the id now belongs to another program
         self.assertIsNone(osd.running_pid(self.env, proc=str(Path(self.dir.name, "none"))))
 

@@ -210,7 +210,7 @@ WALLPAPER_COLOURS = ("#e81123", "#ff8c00", "#ffd800", "#107c10", "#0078d7", "#88
 WALLPAPER_DARK = ("#740912", "#804600", "#806c00", "#083e08", "#003c6c", "#440c4c")
 WALLPAPERS = WALLPAPER_GREYS + WALLPAPER_COLOURS + WALLPAPER_DARK
 DEFAULT_WALLPAPER = "#323232"  # dark grey
-# The Retro theme's backgrounds: a CRT grey, the primary blue of a TV with no signal, or TV static (retro/static.png).
+# The Retro theme's backgrounds: a CRT grey, the primary blue of a TV with no signal, or TV static (ui/retro_assets/static.png).
 RETRO_WALLPAPERS = {"gray": "#808080", "blue": "#0000ff", "static": "static"}
 RETRO_WALLPAPER_LABELS = {"gray": "Gray", "blue": "Blue", "static": "TV static"}
 

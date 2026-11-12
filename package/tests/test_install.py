@@ -2,7 +2,7 @@
 sudo, apt-get (or pacman and makepkg) and wget. Covers the questions it asks first, what it then installs, the versions
 it offers, Arch, and removing TVWCS. Skipped outside the repository."""
 
-import json, os, pty, pwd, select, shutil, subprocess, tempfile, time, unittest
+import json, os, pty, pwd, select, shutil, subprocess, sys, tempfile, time, unittest
 from pathlib import Path
 from unittest import mock
 from tvwcs.system import loginscreen
@@ -498,3 +498,29 @@ class InstallTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ModuleNameTests(unittest.TestCase):
+    """install.sh runs TVWCS's modules by name in the TVWCS it installed, which can be a release from before 5.22.0,
+    when the modules had no folders. And 5.21's install.sh runs the old names in this one."""
+
+    def module(self, lib, new, old):
+        line = next(l for l in SCRIPT.read_text().splitlines() if l.startswith("tvwcs_module()"))
+        out = subprocess.run(
+            ["sh", "-c", f"LIB={lib}; {line}\ntvwcs_module {new} {old}"], capture_output=True, text=True
+        )
+        return out.stdout.strip()
+
+    def test_new_and_old_layouts(self):
+        with tempfile.TemporaryDirectory() as t:
+            (Path(t) / "tvwcs").mkdir()
+            (Path(t) / "tvwcs" / "loginscreen.py").write_text("")
+            self.assertEqual(self.module(t, "system.loginscreen", "loginscreen"), "tvwcs.loginscreen")
+        self.assertEqual(self.module(ROOT / "package", "system.loginscreen", "loginscreen"), "tvwcs.system.loginscreen")
+        self.assertEqual(self.module(ROOT / "package", "settings.ubuntu", "control_ubuntu"), "tvwcs.settings.ubuntu")
+
+    def test_old_names_still_run(self):
+        env = dict(os.environ, PYTHONPATH=str(ROOT / "package"), PYTHONDONTWRITEBYTECODE="1")
+        for module in ("tvwcs.loginscreen", "tvwcs.control_ubuntu"):
+            out = subprocess.run([sys.executable, "-m", module], capture_output=True, text=True, env=env)
+            self.assertIn("usage", (out.stdout + out.stderr).lower(), module)
