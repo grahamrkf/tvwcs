@@ -24,10 +24,10 @@ build() {   # build <staged tree>: owned by root, standard permissions
 P=$STAGE/tvwcs
 install -d "$P/usr/lib/tvwcs/tvwcs" "$P/usr/bin" "$P/usr/share/tvwcs" "$P/usr/share/wayland-sessions" "$P/usr/share/applications" \
     "$P/usr/share/icons/hicolor/scalable/apps" "$P/usr/share/doc/tvwcs" "$P/usr/share/slick-greeter/badges"
-install -m 644 "$ROOT"/package/tvwcs/*.py "$P/usr/lib/tvwcs/tvwcs/"
-install -d "$P/usr/lib/tvwcs/tvwcs/retro/icons/hicolor/scalable/actions"   # the Retro theme's fonts, icons and TV static (scripts/make-retro-assets.py)
-install -m 644 "$ROOT"/package/tvwcs/retro/*.ttf "$ROOT"/package/tvwcs/retro/*.png "$P/usr/lib/tvwcs/tvwcs/retro/"
-install -m 644 "$ROOT"/package/tvwcs/retro/icons/hicolor/scalable/actions/*.svg "$P/usr/lib/tvwcs/tvwcs/retro/icons/hicolor/scalable/actions/"
+# the Python package with its folders, and the Retro theme's fonts, icons and TV static (ui/retro_assets/)
+(cd "$ROOT/package/tvwcs" && find . -name __pycache__ -prune -o -type f -print) | while read -r F; do
+    install -D -m 644 "$ROOT/package/tvwcs/$F" "$P/usr/lib/tvwcs/tvwcs/$F"
+done
 install -m 644 "$ROOT/VERSION" "$P/usr/lib/tvwcs/VERSION"
 # TVWCS's own updates from its GitHub releases (vendor.py). A vendor building its own package leaves it out with
 # TVWCS_NO_UPDATER=1, so its repository delivers TVWCS (or ships a vendor.json, which wins anyway)

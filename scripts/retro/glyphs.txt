@@ -2,7 +2,7 @@
 #
 # "@small U+XXXX" and "@large U+XXXX" add a character the bitmap fonts lack to TVWCS Pixel 5x7 (5 wide) or TVWCS
 # Pixel 8x8 (8 wide). Every character has 8 rows: rows 1-7 stand on the baseline and row 8 hangs below it.
-# "@icon name" is a 9 x 9 icon, written as package/tvwcs/retro/icons/tvwcs-retro-<name>-symbolic.svg.
+# "@icon name" is a 9 x 9 icon, written as package/tvwcs/ui/retro_assets/icons/tvwcs-retro-<name>-symbolic.svg.
 # '#' is a lit pixel, '.' a dark one. A blank line ends each drawing.
 
 @small U+2026

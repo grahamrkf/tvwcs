@@ -259,7 +259,7 @@ ask_questions() {
 }
 
 # Ubuntu's own extras, offered for removal (purge) one by one: "key|name|packages|what it is". The same lists are in
-# tvwcs/control_ubuntu.py, which removes them (Settings > Software updates offers them too). Nothing is pinned, so a
+# tvwcs/settings/ubuntu.py, which removes them (Settings > Software updates offers them too). Nothing is pinned, so a
 # package that needs snapd brings it back.
 UBUNTU_EXTRAS="snap|Snap (snapd)|snapd|Ubuntu's second app store. Every Snap app goes with it.
 cloud-init|cloud-init|cloud-init cloud-init-base cloud-initramfs-copymods cloud-initramfs-dyn-netconf|Sets up cloud servers on their first start; at home it only slows start-up.
@@ -289,7 +289,7 @@ purge_ubuntu_extras() {   # after the install: a failure only warns
     [ -n "$PURGE" ] || return 0
     say "Removing $PURGE_NAMES..."
     # shellcheck disable=SC2086
-    as_root env PYTHONDONTWRITEBYTECODE=1 PYTHONPATH="$LIB" python3 -m tvwcs.control_ubuntu purge $PURGE ||
+    as_root env PYTHONDONTWRITEBYTECODE=1 PYTHONPATH="$LIB" python3 -m "$(tvwcs_module settings.ubuntu control_ubuntu)" purge $PURGE ||
         warn "$PURGE_NAMES could not be removed. Settings > Software updates can try again."
 }
 
@@ -313,10 +313,13 @@ summary() {
 }
 
 # ====================================================================== doing it
-loginscreen_root() { as_root env PYTHONDONTWRITEBYTECODE=1 PYTHONPATH="$LIB" python3 -m tvwcs.loginscreen "$@"; }
+# tvwcs_module <new> <old>: a module's name in the installed TVWCS. From 5.22.0 the modules are in folders
+# (tvwcs.system.loginscreen); an older release chosen to install has them at the top (tvwcs.loginscreen).
+tvwcs_module() { if [ -f "$LIB/tvwcs/$(echo "$1" | tr . /).py" ]; then echo "tvwcs.$1"; else echo "tvwcs.$2"; fi; }
+loginscreen_root() { as_root env PYTHONDONTWRITEBYTECODE=1 PYTHONPATH="$LIB" python3 -m "$(tvwcs_module system.loginscreen loginscreen)" "$@"; }
 
 # Without a login screen: the shell profile starts TVWCS's session at a login on the first console (as this user)
-console_profile() { env PYTHONDONTWRITEBYTECODE=1 PYTHONPATH="$LIB" python3 -m tvwcs.loginscreen profile "$1"; }
+console_profile() { env PYTHONDONTWRITEBYTECODE=1 PYTHONPATH="$LIB" python3 -m "$(tvwcs_module system.loginscreen loginscreen)" profile "$1"; }
 
 install_arch() {
     if [ -n "$FAKEROOT" ]; then as_root pacman -S --needed --noconfirm fakeroot || fail "pacman could not install fakeroot."; fi

@@ -14,9 +14,9 @@ export PYTHONPATH
 # --no-server-mode, --start and --user= still work.
 case "${1:-}" in
     help|-h|--help) exec python3 -m tvwcs.usage ;;
-    volume) exec python3 -m tvwcs.control_sound "$@" ;;
-    vendor) exec python3 -m tvwcs.vendor ;;
-    server-mode|start-session|-s|--server-mode|--no-server-mode|--start|--user=*) exec python3 -m tvwcs.servermode cli "$@" ;;
+    volume) exec python3 -m tvwcs.settings.sound "$@" ;;
+    vendor) exec python3 -m tvwcs.core.vendor ;;
+    server-mode|start-session|-s|--server-mode|--no-server-mode|--start|--user=*) exec python3 -m tvwcs.system.servermode cli "$@" ;;
 esac
 # `tvwcs session`, and plain `tvwcs` at a text console (no graphical session): TVWCS's own sway session, in TV mode.
 # Elsewhere plain `tvwcs` is for tvwcs.main to decide (sway_include.where).
@@ -38,9 +38,9 @@ if [ "$*" = session ]; then
     session
 fi
 if [ $# -eq 0 ] && [ -z "${WAYLAND_DISPLAY:-}${DISPLAY:-}" ]; then
-    if [ -n "${SSH_CONNECTION:-}${SSH_TTY:-}" ]; then exec python3 -m tvwcs.servermode cli; fi
+    if [ -n "${SSH_CONNECTION:-}${SSH_TTY:-}" ]; then exec python3 -m tvwcs.system.servermode cli; fi
     session
 fi
 # The lock screen without GTK, so a session that starts locked (lockscreen.py) locks as soon as it can
-case "${1:-}" in lock|lock-at-start) exec python3 -m tvwcs.lockscreen "$@" ;; esac
+case "${1:-}" in lock|lock-at-start) exec python3 -m tvwcs.system.lockscreen "$@" ;; esac
 exec python3 -m tvwcs.main "$@"

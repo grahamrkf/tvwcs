@@ -1,6 +1,6 @@
 
 ------------------------------------------------------------------------------------------------------------------
-The Retro theme's fonts (tvwcs/retro/TVWCSPixel5x7.ttf, TVWCSPixel8x16.ttf and TVWCSPixel8x8.ttf) are built by
+The Retro theme's fonts (tvwcs/ui/retro_assets/TVWCSPixel5x7.ttf, TVWCSPixel8x16.ttf and TVWCSPixel8x8.ttf) are built by
 scripts/make-retro-assets.py from these bitmap fonts, with characters and icons added by TVWCS
 (scripts/retro/glyphs.txt, under TVWCS's licence above):
 
@@ -61,7 +61,7 @@ TVWCS Pixel 8x16: the 8 x 16 font of Spleen 2.1.0 by Frederic Cambus (https://gi
   ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
   POSSIBILITY OF SUCH DAMAGE.
 
-tvwcs/retro/VT323-Regular.ttf (Settings › Appearance › Font: VT323), unchanged from
+tvwcs/ui/retro_assets/VT323-Regular.ttf (Settings › Appearance › Font: VT323), unchanged from
 https://github.com/google/fonts/tree/main/ofl/vt323, under the SIL Open Font License 1.1:
 
   Copyright 2011, The VT323 Project Authors (peter.hull@oikoi.com)

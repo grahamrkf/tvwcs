@@ -27,9 +27,10 @@ sha256sums=('@SHA256@')
 package() {
   cd "$pkgname-$pkgver"
   local lib="$pkgdir/usr/lib/tvwcs"
-  install -Dm644 -t "$lib/tvwcs" package/tvwcs/*.py
-  install -Dm644 -t "$lib/tvwcs/retro" package/tvwcs/retro/*.ttf package/tvwcs/retro/*.png
-  install -Dm644 -t "$lib/tvwcs/retro/icons/hicolor/scalable/actions" package/tvwcs/retro/icons/hicolor/scalable/actions/*.svg
+  # the Python package with its folders, and the Retro theme's fonts, icons and TV static (ui/retro_assets/)
+  (cd package/tvwcs && find . -name __pycache__ -prune -o -type f -print) | while read -r f; do
+    install -Dm644 "package/tvwcs/$f" "$lib/tvwcs/$f"
+  done
   install -Dm644 VERSION "$lib/VERSION"
   # Settings' TVWCS updates then says to build the next release's package instead of installing a .deb from GitHub
   echo arch > "$lib/PACKAGE"

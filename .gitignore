@@ -13,4 +13,3 @@ resources/*.zip
 resources/*.deb
 resources/arch/
 resources/fedora/
-!resources/TVWCS-2.5.0.zip
