@@ -140,17 +140,6 @@ def draw_logging_in(page, state):
     )
     if cur and not loginscreen.wayland_ok(cur):
         page.note(f"{loginscreen.name(cur)} cannot start sway reliably. greetd or SDDM can.", "error")
-    if st["old_greeter"] and not server:
-        page.row(
-            "Remove TVWCS's old login screen",
-            "",
-            lambda: remove_old_greeter(page),
-            ident="user:old",
-            detail="TVWCS 4's login screen is still set up; TVWCS 5 no longer has one",
-            icon="user-trash-symbolic",
-            fallback="✕",
-        )
-    draw_startup(page)
 
 
 def toggle_autologin(page, a, mine, console=False):
@@ -219,23 +208,6 @@ def change_login_screen(page, cur, others):
         )
 
     page.win.choose_option("Login screen", [(u, f"Switch to {loginscreen.name(u)}") for u in others], None, picked)
-
-
-def remove_old_greeter(page):
-    def done(problem):
-        if problem:
-            page.win.notice("Login screen", problem)
-            return
-        page.refresh(quiet=True)
-
-    page.win.confirm(
-        "Remove TVWCS's old login screen?",
-        "Another login screen installed here takes over from the next start; without one, "
-        "greetd's text login does, and the automatic login is kept. It asks for your password.",
-        "Remove",
-        lambda: run_root(page, ["migrate"], "Removing the old login screen", done),
-        danger=False,
-    )
 
 
 # ---------------------------------------------------------------------- server mode

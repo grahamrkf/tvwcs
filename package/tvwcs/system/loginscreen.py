@@ -5,9 +5,6 @@ agreety, or another greeter), LightDM or SDDM. Logging in automatically into TVW
 screen in use keeps it: greetd's initial session, or LightDM's and SDDM's own settings. On a computer without a login
 screen, install.sh sets up greetd with its text login and the automatic login.
 
-TVWCS 4.x had its own greeter, run by greetd. `migrate` removes it: greetd then shows its text login after logging out,
-or the computer switches to another installed login screen.
-
 Changes take effect at the next start: a running login screen (and the session it started) is never stopped.
 Changing the system needs root: `python3 -m tvwcs.system.loginscreen <command>` is what Settings and install.sh run as root.
 TVWCS_ROOT puts every system path under another folder (the tests), and then nothing is run."""
@@ -33,18 +30,6 @@ SESSION_DIRS = (
     "/usr/local/share/xsessions",
 )
 UNIT_DIRS = ("/etc/systemd/system", "/usr/lib/systemd/system", "/lib/systemd/system")
-# What TVWCS 4.x's own login screen left behind
-OLD_GREETER_MARK = "tvwcs-greeter/greeter"
-OLD_FILES = (
-    "/usr/local/lib/tvwcs-greeter",
-    "/etc/tvwcs/login-screen.json",
-    "/etc/tvwcs/previous-login-screen",
-    "/var/lib/tvwcs-greeter",
-)
-OLD_GREETD_BACKUP = "/etc/greetd/config.toml.tvwcs-backup"
-PAM_FILE = "/etc/pam.d/greetd"
-PAM_BACKUP = "/etc/pam.d/greetd.tvwcs-backup"
-PAM_MARK = "# Written by TVWCS"
 
 # Login screens, by systemd unit. wayland: it can start Wayland sessions such as sway reliably.
 KNOWN = {
@@ -62,17 +47,6 @@ KNOWN = {
     "entrance": ("Entrance", False),
     "lemurs": ("lemurs", True),
 }
-GRAPHICAL = (
-    "gdm3",
-    "gdm",
-    "sddm",
-    "lightdm",
-    "lxdm",
-    "slim",
-    "ly",
-    "emptty",
-    "lemurs",
-)  # switched to when TVWCS's old greeter goes
 AUTOLOGIN = (
     "greetd",
     "lightdm",
@@ -183,11 +157,9 @@ def greetd_config() -> dict:
 
 
 def current_greeter(config=None) -> str:
-    """greetd's greeter program (agreety, tuigreet...), "tvwcs" for TVWCS 4.x's, "" without greetd's config."""
+    """greetd's greeter program (agreety, tuigreet...), "" without greetd's config."""
     config = greetd_config() if config is None else config
     cmd = str(config.get("default_session", {}).get("command", ""))
-    if OLD_GREETER_MARK in cmd:
-        return "tvwcs"
     try:
         argv = shlex.split(cmd)
     except ValueError:
@@ -195,11 +167,6 @@ def current_greeter(config=None) -> str:
     while argv and argv[0] in ("cage", "env") or argv and (argv[0].startswith("-") or "=" in argv[0]):
         argv = argv[1:]
     return os.path.basename(argv[0]) if argv else ""
-
-
-def old_greeter() -> bool:
-    """TVWCS 4.x's own login screen is still set up."""
-    return current_greeter() == "tvwcs" or any(path(p).exists() for p in OLD_FILES[:1])
 
 
 def unit_installed(unit) -> bool:
@@ -217,9 +184,9 @@ def installed_screens() -> list:
 
 
 def status() -> dict:
-    """What Settings shows: the login screen in use, the others installed, and whether TVWCS 4.x's is still set up."""
+    """What Settings shows: the login screen in use, the others installed and the automatic login."""
     cur = active_unit()
-    return {"current": cur, "installed": installed_screens(), "old_greeter": old_greeter(), "autologin": autologin(cur)}
+    return {"current": cur, "installed": installed_screens(), "autologin": autologin(cur)}
 
 
 # ---------------------------------------------------------------------- sessions
@@ -539,15 +506,11 @@ class Changer:
         self.systemctl("set-default", "graphical.target")  # greetd is only started by graphical.target
 
     def write_greetd(self, autologin_to=None, greeter=None):
-        """greetd's config, keeping its greeter (agreety when it was TVWCS 4.x's or there was none) and console.
+        """greetd's config, keeping its greeter (agreety when there was none) and console.
         autologin_to: (user, session id), or None for no automatic login."""
         cfg = greetd_config()
         ds = cfg.get("default_session", {})
-        cmd = (
-            greeter
-            or ("" if current_greeter(cfg) in ("", "tvwcs") else str(ds.get("command", "")))
-            or agreety_command()
-        )
+        cmd = greeter or ("" if current_greeter(cfg) == "" else str(ds.get("command", ""))) or agreety_command()
         default_user, _agreety, default_vt = distro.greetd()
         user = ds.get("user") or default_user
         vt = cfg.get("terminal", {}).get("vt", default_vt)
@@ -620,43 +583,6 @@ class Changer:
             "From the next start, greetd logs " + (f"{user} in automatically." if user else "people in (a text login).")
         )
 
-    def migrate(self, user=""):
-        """Remove TVWCS 4.x's own login screen. Another graphical login screen installed here takes over (with the
-        automatic login for `user`, when given); otherwise greetd stays, with its text login and the automatic login."""
-        was_on = active_unit() == "greetd" and current_greeter() == "tvwcs"
-        auto = autologin("greetd")[0] if was_on else ""
-        user = user or auto
-        other = next((u for u in GRAPHICAL if u in installed_screens()), "")
-        if path(OLD_GREETD_BACKUP).exists() and current_greeter() == "tvwcs":
-            os.replace(path(OLD_GREETD_BACKUP), path(GREETD_CONF))
-        self.remove(OLD_GREETD_BACKUP)
-        if was_on and not other or current_greeter() == "tvwcs":
-            self.write_greetd((user, SESSION) if user and not other else None)
-        if path(PAM_BACKUP).exists() and PAM_MARK in _read(PAM_FILE):
-            os.replace(path(PAM_BACKUP), path(PAM_FILE))
-        for p in OLD_FILES:
-            f = path(p)
-            if f.is_dir():
-                shutil.rmtree(f, ignore_errors=True)
-            else:
-                self.remove(p)
-        if was_on and other:
-            self.switch_to(other)
-            if user and other in AUTOLOGIN:
-                self.set_autologin(user, SESSION, other)
-            self.out(f"TVWCS's old login screen is removed. From the next start, the computer uses {name(other)}.")
-        elif was_on:
-            self.out(
-                "TVWCS's old login screen is removed. From the next start, greetd "
-                + (
-                    f"logs {user} in automatically, and shows its text login after logging out."
-                    if user
-                    else "shows its text login."
-                )
-            )
-        else:
-            self.out("TVWCS's old login screen is removed.")
-
 
 INSTALL_THEN = """set -e
 n=$1; shift; packages=""
@@ -689,7 +615,6 @@ USAGE = """Usage (as root): python3 -m tvwcs.system.loginscreen <command>
   autologin USER [SESSION] | autologin --off   log USER in at start-up into SESSION (default: tvwcs-sway)
   switch UNIT                                  use another installed login screen (sddm...) from the next start
   greetd [USER]                                use greetd's text login, logging USER in automatically
-  migrate [USER]                               remove TVWCS 4.x's own login screen
 Without root: status | profile on|off   (profile: start TVWCS's session at a login on the first text console)"""
 
 
@@ -724,8 +649,6 @@ def main(argv):
             c.out(f"From the next start, the computer uses {name(args[0])}.")
         elif cmd == "greetd" and len(args) <= 1:
             c.use_greetd(args[0] if args else "")
-        elif cmd == "migrate" and len(args) <= 1:
-            c.migrate(args[0] if args else "")
         else:
             print(USAGE, file=sys.stderr)
             return 2

@@ -1,24 +1,11 @@
 """The login screen and automatic login without GTK, in a pretend root folder (TVWCS_ROOT): greetd, LightDM and SDDM,
-removing TVWCS 4.x's own login screen, and changing a password."""
+and changing a password."""
 
 import os, tempfile, unittest
 from pathlib import Path
 from unittest import mock
 from tvwcs.settings import account
 from tvwcs.system import loginscreen
-
-OLD_GREETD = """# Written by TVWCS (Settings > User > Login screen). Removing it puts back the config from before.
-[terminal]
-vt = 7
-
-[default_session]
-command = "cage -s -d -- /usr/local/lib/tvwcs-greeter/greeter"
-user = "_greetd"
-
-[initial_session]
-command = "/usr/local/lib/tvwcs-greeter/start-session x11 i3 /usr/local/bin/tvwcs-session i3"
-user = "tv"
-"""
 
 
 class RootTests(unittest.TestCase):
@@ -49,15 +36,6 @@ class RootTests(unittest.TestCase):
             link.unlink()
         link.symlink_to(f"/lib/systemd/system/{unit}.service")
 
-    def old_greeter(self):
-        (self.etc / "greetd" / "config.toml").write_text(OLD_GREETD)
-        self.use("greetd")
-        lib = self.root / "usr" / "local" / "lib" / "tvwcs-greeter"
-        lib.mkdir(parents=True)
-        (lib / "greeter").write_text("")
-        (self.etc / "tvwcs").mkdir()
-        (self.etc / "tvwcs" / "login-screen.json").write_text("{}")
-
     def test_a_disabled_login_screen_does_not_count(self):
         (self.etc / "X11").mkdir()
         (self.etc / "X11" / "default-display-manager").write_text("/usr/sbin/greetd\n")
@@ -70,12 +48,6 @@ class RootTests(unittest.TestCase):
     def test_greeter_names(self):
         self.assertEqual(
             loginscreen.current_greeter({"default_session": {"command": "agreety --cmd /bin/sh"}}), "agreety"
-        )
-        self.assertEqual(
-            loginscreen.current_greeter(
-                {"default_session": {"command": "cage -s -d -- /usr/local/lib/tvwcs-greeter/greeter"}}
-            ),
-            "tvwcs",
         )
         self.assertEqual(
             loginscreen.current_greeter({"default_session": {"command": "cage -s -- gtkgreet"}}), "gtkgreet"
@@ -207,27 +179,6 @@ class RootTests(unittest.TestCase):
         with self.assertRaises(SystemExit):
             self.c.set_autologin("tv")
         self.assertFalse(loginscreen.autologin_supported())
-
-    def test_migrating_from_4x_keeps_the_automatic_login_on_greetd(self):
-        self.old_greeter()
-        self.assertTrue(loginscreen.old_greeter())
-        self.c.migrate()
-        cfg = loginscreen.greetd_config()
-        self.assertEqual(cfg["default_session"]["command"], "/usr/sbin/agreety --cmd /usr/bin/tvwcs-session")
-        self.assertEqual(cfg["initial_session"], {"command": "/usr/bin/tvwcs-session", "user": "tv"})
-        self.assertFalse((self.root / "usr" / "local" / "lib" / "tvwcs-greeter").exists())
-        self.assertFalse((self.etc / "tvwcs" / "login-screen.json").exists())
-        self.assertFalse(loginscreen.old_greeter())
-        self.assertEqual(loginscreen.active_unit(), "greetd")
-
-    def test_migrating_from_4x_switches_to_another_login_screen(self):
-        self.old_greeter()
-        (self.units / "sddm.service").write_text("")
-        self.c.migrate()
-        self.assertEqual(loginscreen.active_unit(), "sddm")
-        self.assertEqual(loginscreen.autologin(), ("tv", "tvwcs-sway"))
-        self.assertNotIn("initial_session", loginscreen.greetd_config())  # greetd is off, and has no TVWCS greeter left
-        self.assertEqual(loginscreen.current_greeter(), "agreety")
 
     def test_command_line(self):
         self.assertEqual(loginscreen.main(["greetd", "tv"]), 0)
